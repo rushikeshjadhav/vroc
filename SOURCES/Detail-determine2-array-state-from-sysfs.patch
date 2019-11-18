@@ -1,0 +1,54 @@
+From a4dcdb23ea639d14e92d1c86336de7ad505b2f7d Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Tue, 25 Apr 2017 11:40:27 -0400
+Subject: [RHEL7.5 PATCH 095/169] Detail: determine array state from sysfs
+
+This is easily obtained from sysfs as part of the existing call to
+sysfs_read() and it simplifies the code a little too.
+
+Another small step in the process of getting rid of the GET_ARRAY_STATE
+ioctl.
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Detail.c | 9 ++++-----
+ 1 file changed, 4 insertions(+), 5 deletions(-)
+
+diff --git a/Detail.c b/Detail.c
+index 91c5a98..eb69276 100644
+--- a/Detail.c
++++ b/Detail.c
+@@ -86,7 +86,7 @@ int Detail(char *dev, struct context *c)
+ 			dev, strerror(errno));
+ 		return rv;
+ 	}
+-	sra = sysfs_read(fd, NULL, GET_VERSION|GET_DEVS);
++	sra = sysfs_read(fd, NULL, GET_VERSION | GET_DEVS | GET_ARRAY_STATE);
+ 	if (!sra) {
+ 		pr_err("%s does not appear to be an md device\n", dev);
+ 		close(fd);
+@@ -94,10 +94,10 @@ int Detail(char *dev, struct context *c)
+ 	}
+ 	external = (sra != NULL && sra->array.major_version == -1 &&
+ 		    sra->array.minor_version == -2);
++	inactive = (sra->array_state == ARRAY_ACTIVE ||
++		    sra->array_state == ARRAY_CLEAR);
+ 	st = super_by_fd(fd, &subarray);
+-	if (md_get_array_info(fd, &array) == 0) {
+-		inactive = 0;
+-	} else if (errno == ENODEV && sra) {
++	if (md_get_array_info(fd, &array) && errno == ENODEV) {
+ 		if (sra->array.major_version == -1 &&
+ 		    sra->array.minor_version == -1 &&
+ 		    sra->devs == NULL) {
+@@ -107,7 +107,6 @@ int Detail(char *dev, struct context *c)
+ 			return rv;
+ 		}
+ 		array = sra->array;
+-		inactive = 1;
+ 	} else {
+ 		pr_err("cannot get array detail for %s: %s\n",
+ 		       dev, strerror(errno));
+-- 
+2.7.4
+

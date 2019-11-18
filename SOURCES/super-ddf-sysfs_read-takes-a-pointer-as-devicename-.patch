@@ -1,0 +1,27 @@
+From a0628abf2bf87c69bec3384f90aae2398a8e64aa Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Tue, 16 May 2017 13:29:46 -0400
+Subject: [RHEL7.5 PATCH 141/169] super-ddf: sysfs_read() takes a pointer
+ as device name argument
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ super-ddf.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/super-ddf.c b/super-ddf.c
+index ac14017..50197a8 100644
+--- a/super-ddf.c
++++ b/super-ddf.c
+@@ -3557,7 +3557,7 @@ static int load_super_ddf_all(struct supertype *st, int fd,
+ 	char nm[20];
+ 	int dfd;
+ 
+-	sra = sysfs_read(fd, 0, GET_LEVEL|GET_VERSION|GET_DEVS|GET_STATE);
++	sra = sysfs_read(fd, NULL, GET_LEVEL|GET_VERSION|GET_DEVS|GET_STATE);
+ 	if (!sra)
+ 		return 1;
+ 	if (sra->array.major_version != -1 ||
+-- 
+2.7.4
+

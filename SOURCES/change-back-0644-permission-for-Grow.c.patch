@@ -1,0 +1,21 @@
+From 99148c19bd9149bb938309ffb6b4dcde20b67934 Mon Sep 17 00:00:00 2001
+From: Zhilong Liu <zlliu@suse.com>
+Date: Tue, 2 May 2017 17:27:13 +0800
+Subject: [RHEL7.5 PATCH 105/169] change back 0644 permission for Grow.c
+
+Fixes commit:
+26714713cd2b ("mdadm: Change timestamps to unsigned data type.")
+
+Signed-off-by: Zhilong Liu <zlliu@suse.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Grow.c | 0
+ 1 file changed, 0 insertions(+), 0 deletions(-)
+ mode change 100755 => 100644 Grow.c
+
+diff --git a/Grow.c b/Grow.c
+old mode 100755
+new mode 100644
+-- 
+2.7.4
+

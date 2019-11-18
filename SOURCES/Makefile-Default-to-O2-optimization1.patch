@@ -1,0 +1,25 @@
+From 17d80e6eb64230593ee8d599b94005d303eb58ae Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Fri, 21 Apr 2017 12:06:35 -0400
+Subject: [RHEL7.5 PATCH 091/169] Makefile: Default to -O2 optimization
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Makefile | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Makefile b/Makefile
+index 5655812..6850696 100644
+--- a/Makefile
++++ b/Makefile
+@@ -30,6 +30,7 @@
+ 
+ # define "CXFLAGS" to give extra flags to CC.
+ # e.g.  make CXFLAGS=-O to optimise
++CXFLAGS ?=-O2
+ TCC = tcc
+ UCLIBC_GCC = $(shell for nm in i386-uclibc-linux-gcc i386-uclibc-gcc; do which $$nm > /dev/null && { echo $$nm ; exit; } ; done; echo false No uclibc found )
+ #DIET_GCC = diet gcc
+-- 
+2.7.4
+

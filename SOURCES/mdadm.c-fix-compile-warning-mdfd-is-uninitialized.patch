@@ -1,0 +1,32 @@
+From 5fbc1f1527ec86ae904739a27c0af4e3bc89084e Mon Sep 17 00:00:00 2001
+From: Zhilong Liu <zlliu@suse.com>
+Date: Mon, 10 Apr 2017 12:49:52 +0800
+Subject: [RHEL7.5 PATCH 068/169] mdadm.c:fix compile warning "mdfd is
+ uninitialized"
+
+Initialized the mdfd as -1 to prevent compile error
+of some compilers.
+For example, gcc version 4.8.5(SUSE Linux).
+
+Signed-off-by: Zhilong Liu <zlliu@suse.com>
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ mdadm.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/mdadm.c b/mdadm.c
+index 001ff68..41dae1d 100644
+--- a/mdadm.c
++++ b/mdadm.c
+@@ -1916,7 +1916,7 @@ static int misc_list(struct mddev_dev *devlist,
+ 	int rv = 0;
+ 
+ 	for (dv = devlist; dv; dv = (rv & 16) ? NULL : dv->next) {
+-		int mdfd;
++		int mdfd = -1;
+ 
+ 		switch(dv->disposition) {
+ 		case 'D':
+-- 
+2.7.4
+

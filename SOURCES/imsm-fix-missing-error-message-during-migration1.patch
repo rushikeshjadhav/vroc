@@ -1,0 +1,35 @@
+From 565cc99e341b3021ad26ff6da19a67d4e4abffde Mon Sep 17 00:00:00 2001
+From: Pawel Baldysiak <pawel.baldysiak@intel.com>
+Date: Tue, 24 Jan 2017 14:29:33 +0100
+Subject: [RHEL7.5 PATCH 002/169] imsm: fix missing error message during
+ migration
+
+If user tries to migrate from raid0 to raid5 and there is no spare
+drive to perform it - mdadm will exit with errorcode, but
+no error message is printed.
+
+Print error instead of debug message when this condition occurs,
+so user is informed why requested migration is not started.
+
+Signed-off-by: Pawel Baldysiak <pawel.baldysiak@intel.com>
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ super-intel.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/super-intel.c b/super-intel.c
+index 433bb6d..d5e9517 100644
+--- a/super-intel.c
++++ b/super-intel.c
+@@ -10718,7 +10718,7 @@ static int imsm_create_metadata_update_for_migration(
+ 			free(u);
+ 			sysfs_free(spares);
+ 			update_memory_size = 0;
+-			dprintf("error: cannot get spare device for requested migration");
++			pr_err("cannot get spare device for requested migration\n");
+ 			return 0;
+ 		}
+ 		sysfs_free(spares);
+-- 
+2.7.4
+

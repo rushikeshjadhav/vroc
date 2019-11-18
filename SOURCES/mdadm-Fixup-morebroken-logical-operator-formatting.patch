@@ -1,0 +1,256 @@
+From d7be7d87366a7f9b190bc4e41ea06f7c9984028e Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Tue, 16 May 2017 13:59:43 -0400
+Subject: [RHEL7.5 PATCH 143/169] mdadm: Fixup more broken logical operator
+ formatting
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Assemble.c       |  9 ++++-----
+ Grow.c           | 16 +++++++++-------
+ Manage.c         |  4 ++--
+ Monitor.c        |  4 ++--
+ mapfile.c        |  4 ++--
+ mdstat.c         | 10 ++++++----
+ platform-intel.c |  4 ++--
+ restripe.c       |  4 ++--
+ super-ddf.c      | 15 +++++++--------
+ super-intel.c    |  3 +--
+ util.c           |  3 +--
+ 11 files changed, 38 insertions(+), 38 deletions(-)
+
+diff --git a/Assemble.c b/Assemble.c
+index 1b1905c..afc6d9c 100644
+--- a/Assemble.c
++++ b/Assemble.c
+@@ -220,8 +220,8 @@ static int select_devices(struct mddev_dev *devlist,
+ 					pr_err("not a recognisable container: %s\n",
+ 					       devname);
+ 				tmpdev->used = 2;
+-			} else if (!tst->ss->load_container
+-				   || tst->ss->load_container(tst, dfd, NULL)) {
++			} else if (!tst->ss->load_container ||
++				   tst->ss->load_container(tst, dfd, NULL)) {
+ 				if (report_mismatch)
+ 					pr_err("no correct container type: %s\n",
+ 					       devname);
+@@ -776,9 +776,8 @@ static int load_devices(struct devs *devices, char *devmap,
+ 				*stp = st;
+ 				return -1;
+ 			}
+-			if (best[i] == -1
+-			    || (devices[best[i]].i.events
+-				< devices[devcnt].i.events))
++			if (best[i] == -1 || (devices[best[i]].i.events
++					      < devices[devcnt].i.events))
+ 				best[i] = devcnt;
+ 		}
+ 		devcnt++;
+diff --git a/Grow.c b/Grow.c
+index 39110b8..db3f18b 100644
+--- a/Grow.c
++++ b/Grow.c
+@@ -3995,8 +3995,8 @@ int progress_reshape(struct mdinfo *info, struct reshape *reshape,
+ 	 * a backup.
+ 	 */
+ 	if (advancing) {
+-		if ((need_backup > info->reshape_progress
+-		     || info->array.major_version < 0) &&
++		if ((need_backup > info->reshape_progress ||
++		     info->array.major_version < 0) &&
+ 		    *suspend_point < info->reshape_progress + target) {
+ 			if (need_backup < *suspend_point + 2 * target)
+ 				*suspend_point = need_backup;
+@@ -4149,8 +4149,9 @@ check_progress:
+ 	 * it was just a device failure that leaves us degraded but
+ 	 * functioning.
+ 	 */
+-	if (sysfs_get_str(info, NULL, "reshape_position", buf, sizeof(buf)) < 0
+-	    || strncmp(buf, "none", 4) != 0) {
++	if (sysfs_get_str(info, NULL, "reshape_position", buf,
++			  sizeof(buf)) < 0 ||
++	    strncmp(buf, "none", 4) != 0) {
+ 		/* The abort might only be temporary.  Wait up to 10
+ 		 * seconds for fd to contain a valid number again.
+ 		 */
+@@ -4182,9 +4183,10 @@ check_progress:
+ 		/* Maybe racing with array shutdown - check state */
+ 		if (fd >= 0)
+ 			close(fd);
+-		if (sysfs_get_str(info, NULL, "array_state", buf, sizeof(buf)) < 0
+-		    || strncmp(buf, "inactive", 8) == 0
+-		    || strncmp(buf, "clear",5) == 0)
++		if (sysfs_get_str(info, NULL, "array_state", buf,
++				  sizeof(buf)) < 0 ||
++		    strncmp(buf, "inactive", 8) == 0 ||
++		    strncmp(buf, "clear",5) == 0)
+ 			return -2; /* abort */
+ 		return -1; /* complete */
+ 	}
+diff --git a/Manage.c b/Manage.c
+index cee5dad..04b9398 100644
+--- a/Manage.c
++++ b/Manage.c
+@@ -655,8 +655,8 @@ int attempt_re_add(int fd, int tfd, struct mddev_dev *dv,
+ 		if (dv->failfast == FlagClear)
+ 			disc.state &= ~(1 << MD_DISK_FAILFAST);
+ 		remove_partitions(tfd);
+-		if (update || dv->writemostly != FlagDefault
+-			|| dv->failfast != FlagDefault) {
++		if (update || dv->writemostly != FlagDefault ||
++		    dv->failfast != FlagDefault) {
+ 			int rv = -1;
+ 			tfd = dev_open(dv->devname, O_RDWR);
+ 			if (tfd < 0) {
+diff --git a/Monitor.c b/Monitor.c
+index 0198a34..725f47d 100644
+--- a/Monitor.c
++++ b/Monitor.c
+@@ -530,7 +530,7 @@ static int check_array(struct state *st, struct mdstat_ent *mdstat,
+ 	if (st->utime == array.utime && st->failed == sra->array.failed_disks &&
+ 	    st->working == sra->array.working_disks &&
+ 	    st->spare == sra->array.spare_disks &&
+-	    (mse == NULL  || (mse->percent == st->percent))) {
++	    (mse == NULL || (mse->percent == st->percent))) {
+ 		if ((st->active < st->raid) && st->spare == 0)
+ 			retval = 1;
+ 		goto out;
+@@ -672,7 +672,7 @@ static int add_new_arrays(struct mdstat_ent *mdstat, struct state **statelist,
+ 	char *name;
+ 
+ 	for (mse = mdstat; mse; mse = mse->next)
+-		if (mse->devnm[0] && (!mse->level  || /* retrieve containers */
++		if (mse->devnm[0] && (!mse->level || /* retrieve containers */
+ 				      (strcmp(mse->level, "raid0") != 0 &&
+ 				       strcmp(mse->level, "linear") != 0))) {
+ 			struct state *st = xcalloc(1, sizeof *st);
+diff --git a/mapfile.c b/mapfile.c
+index c89d403..f3c8191 100644
+--- a/mapfile.c
++++ b/mapfile.c
+@@ -439,8 +439,8 @@ void RebuildMap(void)
+ 					if ((homehost == NULL ||
+ 					     st->ss->match_home(st, homehost) != 1) &&
+ 					    st->ss->match_home(st, "any") != 1 &&
+-					    (require_homehost
+-					     || ! conf_name_is_free(info->name)))
++					    (require_homehost ||
++					     !conf_name_is_free(info->name)))
+ 						/* require a numeric suffix */
+ 						unum = 0;
+ 					else
+diff --git a/mdstat.c b/mdstat.c
+index 3962896..0d44050 100644
+--- a/mdstat.c
++++ b/mdstat.c
+@@ -166,8 +166,8 @@ struct mdstat_ent *mdstat_read(int hold, int start)
+ 			continue;
+ 		insert_here = NULL;
+ 		/* Better be an md line.. */
+-		if (strncmp(line, "md", 2)!= 0 || strlen(line) >= 32
+-		    || (line[2] != '_' && !isdigit(line[2])))
++		if (strncmp(line, "md", 2)!= 0 || strlen(line) >= 32 ||
++		    (line[2] != '_' && !isdigit(line[2])))
+ 			continue;
+ 		strcpy(devnm, line);
+ 
+@@ -212,8 +212,10 @@ struct mdstat_ent *mdstat_read(int hold, int start)
+ 					struct mdstat_ent **ih;
+ 					ih = &all;
+ 					while (ih != insert_here && *ih &&
+-					       ((int)strlen((*ih)->devnm) != ep-w
+-						|| strncmp((*ih)->devnm, w, ep-w) != 0))
++					       ((int)strlen((*ih)->devnm) !=
++						ep-w ||
++						strncmp((*ih)->devnm, w,
++							ep-w) != 0))
+ 						ih = & (*ih)->next;
+ 					insert_here = ih;
+ 				}
+diff --git a/platform-intel.c b/platform-intel.c
+index 9867697..a11101d 100644
+--- a/platform-intel.c
++++ b/platform-intel.c
+@@ -548,8 +548,8 @@ static int read_efi_variable(void *buffer, ssize_t buf_size, char *variable_name
+ 
+ 	errno = 0;
+ 	var_data_len = strtoul(buf, NULL, 16);
+-	if ((errno == ERANGE && (var_data_len == LONG_MAX))
+-	    || (errno != 0 && var_data_len == 0))
++	if ((errno == ERANGE && (var_data_len == LONG_MAX)) ||
++	    (errno != 0 && var_data_len == 0))
+ 		return 1;
+ 
+ 	/* get data */
+diff --git a/restripe.c b/restripe.c
+index de85ee4..6b31695 100644
+--- a/restripe.c
++++ b/restripe.c
+@@ -731,8 +731,8 @@ int restore_stripes(int *dest, unsigned long long *offsets,
+ 		zero_size = chunk_size;
+ 	}
+ 
+-	if (stripe_buf == NULL || stripes == NULL || blocks == NULL
+-	    || zero == NULL) {
++	if (stripe_buf == NULL || stripes == NULL || blocks == NULL ||
++	    zero == NULL) {
+ 		rv = -2;
+ 		goto abort;
+ 	}
+diff --git a/super-ddf.c b/super-ddf.c
+index 769eded..4da7c09 100644
+--- a/super-ddf.c
++++ b/super-ddf.c
+@@ -932,14 +932,13 @@ static int load_ddf_headers(int fd, struct ddf_super *super, char *devname)
+ 	if (load_ddf_header(fd, be64_to_cpu(super->anchor.secondary_lba),
+ 			    dsize >> 9,  2,
+ 			    &super->secondary, &super->anchor)) {
+-		if (super->active == NULL
+-		    || (be32_to_cpu(super->primary.seq)
+-			< be32_to_cpu(super->secondary.seq) &&
+-			!super->secondary.openflag)
+-		    || (be32_to_cpu(super->primary.seq)
+-			== be32_to_cpu(super->secondary.seq) &&
+-			super->primary.openflag && !super->secondary.openflag)
+-			)
++		if (super->active == NULL ||
++		    (be32_to_cpu(super->primary.seq)
++		     < be32_to_cpu(super->secondary.seq) &&
++			!super->secondary.openflag) ||
++		    (be32_to_cpu(super->primary.seq) ==
++		     be32_to_cpu(super->secondary.seq) &&
++			super->primary.openflag && !super->secondary.openflag))
+ 			super->active = &super->secondary;
+ 	} else if (devname &&
+ 		   be64_to_cpu(super->anchor.secondary_lba) != ~(__u64)0)
+diff --git a/super-intel.c b/super-intel.c
+index c84e755..3d0a37c 100644
+--- a/super-intel.c
++++ b/super-intel.c
+@@ -10874,8 +10874,7 @@ static int imsm_create_metadata_update_for_reshape(
+ 	 */
+ 	spares = get_spares_for_grow(st);
+ 
+-	if (spares == NULL
+-	    || delta_disks > spares->array.spare_disks) {
++	if (spares == NULL || delta_disks > spares->array.spare_disks) {
+ 		pr_err("imsm: ERROR: Cannot get spare devices for %s.\n", geo->dev_name);
+ 		i = -1;
+ 		goto abort;
+diff --git a/util.c b/util.c
+index 0564c0b..d89438c 100644
+--- a/util.c
++++ b/util.c
+@@ -2213,8 +2213,7 @@ void enable_fds(int devices)
+ {
+ 	unsigned int fds = 20 + devices;
+ 	struct rlimit lim;
+-	if (getrlimit(RLIMIT_NOFILE, &lim) != 0
+-	    || lim.rlim_cur >= fds)
++	if (getrlimit(RLIMIT_NOFILE, &lim) != 0 || lim.rlim_cur >= fds)
+ 		return;
+ 	if (lim.rlim_max < fds)
+ 		lim.rlim_max = fds;
+-- 
+2.7.4
+

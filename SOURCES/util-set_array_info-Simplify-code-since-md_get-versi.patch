@@ -1,0 +1,52 @@
+From 700483a22340f2f25a761acd08e6db87e92d90e9 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Wed, 5 Apr 2017 15:06:24 -0400
+Subject: [RHEL7.5 PATCH 053/169] util/set_array_info: Simplify code since
+ md_get_version returns a constant
+
+md_get_version() always returns (0 * 1000) + (90 * 100) + 3, so no
+point in calling it.
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ util.c | 19 ++++++++-----------
+ 1 file changed, 8 insertions(+), 11 deletions(-)
+
+diff --git a/util.c b/util.c
+index 56daee3..afeb6a5 100644
+--- a/util.c
++++ b/util.c
+@@ -1858,22 +1858,19 @@ int set_array_info(int mdfd, struct supertype *st, struct mdinfo *info)
+ 	 * This varies between externally managed arrays
+ 	 * and older kernels
+ 	 */
+-	int vers = md_get_version(mdfd);
++	mdu_array_info_t inf;
+ 	int rv;
+ 
+ #ifndef MDASSEMBLE
+ 	if (st->ss->external)
+-		rv = sysfs_set_array(info, vers);
+-	else
++		return sysfs_set_array(info, 9003);
+ #endif
+-		if ((vers % 100) >= 1) { /* can use different versions */
+-		mdu_array_info_t inf;
+-		memset(&inf, 0, sizeof(inf));
+-		inf.major_version = info->array.major_version;
+-		inf.minor_version = info->array.minor_version;
+-		rv = md_set_array_info(mdfd, &inf);
+-	} else
+-		rv = md_set_array_info(mdfd, NULL);
++		
++	memset(&inf, 0, sizeof(inf));
++	inf.major_version = info->array.major_version;
++	inf.minor_version = info->array.minor_version;
++	rv = md_set_array_info(mdfd, &inf);
++
+ 	return rv;
+ }
+ 
+-- 
+2.7.4
+

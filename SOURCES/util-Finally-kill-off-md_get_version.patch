@@ -1,0 +1,66 @@
+From 303949f6f00b750a88bcdfc39ffdfe9f0463f6f2 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Wed, 5 Apr 2017 15:49:18 -0400
+Subject: [RHEL7.5 PATCH 066/169] util: Finally kill off md_get_version()
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ mdadm.h |  1 -
+ util.c  | 29 -----------------------------
+ 2 files changed, 30 deletions(-)
+
+diff --git a/mdadm.h b/mdadm.h
+index 612bd86..f1f643c 100644
+--- a/mdadm.h
++++ b/mdadm.h
+@@ -1404,7 +1404,6 @@ extern int Dump_metadata(char *dev, char *dir, struct context *c,
+ extern int Restore_metadata(char *dev, char *dir, struct context *c,
+ 			    struct supertype *st, int only);
+ 
+-extern int md_get_version(int fd);
+ int md_get_array_info(int fd, struct mdu_array_info_s *array);
+ int md_set_array_info(int fd, struct mdu_array_info_s *array);
+ int md_get_disk_info(int fd, struct mdu_disk_info_s *disk);
+diff --git a/util.c b/util.c
+index afeb6a5..a536f81 100644
+--- a/util.c
++++ b/util.c
+@@ -273,35 +273,6 @@ int parse_uuid(char *str, int uuid[4])
+ 	return 0;
+ }
+ 
+-/*
+- * Get the md version number.
+- * We use the RAID_VERSION ioctl if it is supported
+- * If not, but we have a block device with major '9', we assume
+- * 0.36.0
+- *
+- * Return version number as 24 but number - assume version parts
+- * always < 255
+- */
+-
+-int md_get_version(int fd)
+-{
+-	struct stat stb;
+-	mdu_version_t vers;
+-
+-	if (fstat(fd, &stb)<0)
+-		return -1;
+-	if ((S_IFMT&stb.st_mode) != S_IFBLK)
+-		return -1;
+-
+-	if (ioctl(fd, RAID_VERSION, &vers) == 0)
+-		return  (vers.major*10000) + (vers.minor*100) + vers.patchlevel;
+-	if (errno == EACCES)
+-		return -1;
+-	if (major(stb.st_rdev) == MD_MAJOR)
+-		return (3600);
+-	return -1;
+-}
+-
+ int get_linux_version()
+ {
+ 	struct utsname name;
+-- 
+2.7.4
+

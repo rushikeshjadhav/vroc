@@ -1,0 +1,453 @@
+From fc54fe7a7e77fdb6316d332d4d41d0ed2293d6be Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Tue, 16 May 2017 13:52:15 -0400
+Subject: [RHEL7.5 PATCH 142/169] mdadm: Fixup a large number of bad
+ formatting of logical operators
+
+Logical oprators never belong at the beginning of a line.
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Assemble.c    | 23 ++++++++++-------------
+ Grow.c        | 34 ++++++++++++++++------------------
+ Manage.c      | 29 +++++++++++++----------------
+ managemon.c   | 10 +++++-----
+ mdadm.c       |  3 +--
+ monitor.c     |  4 ++--
+ super-ddf.c   | 33 ++++++++++++++++-----------------
+ super-intel.c | 10 +++++-----
+ util.c        | 20 ++++++++------------
+ 9 files changed, 76 insertions(+), 90 deletions(-)
+
+diff --git a/Assemble.c b/Assemble.c
+index 30d5838..1b1905c 100644
+--- a/Assemble.c
++++ b/Assemble.c
+@@ -753,12 +753,12 @@ static int load_devices(struct devs *devices, char *devmap,
+ 				bestcnt = newbestcnt;
+ 			}
+ 			if (best[i] >=0 &&
+-			    devices[best[i]].i.events
+-			    == devices[devcnt].i.events
+-			    && (devices[best[i]].i.disk.minor
+-				!= devices[devcnt].i.disk.minor)
+-			    && st->ss == &super0
+-			    && content->array.level != LEVEL_MULTIPATH) {
++			    devices[best[i]].i.events ==
++			    devices[devcnt].i.events &&
++			    (devices[best[i]].i.disk.minor
++			     != devices[devcnt].i.disk.minor) &&
++			    st->ss == &super0 &&
++			    content->array.level != LEVEL_MULTIPATH) {
+ 				/* two different devices with identical superblock.
+ 				 * Could be a mis-detection caused by overlapping
+ 				 * partitions.  fail-safe.
+@@ -801,14 +801,11 @@ static int force_array(struct mdinfo *content,
+ 	int okcnt = 0;
+ 	while (!enough(content->array.level, content->array.raid_disks,
+ 		       content->array.layout, 1,
+-		       avail)
+-	       ||
++		       avail) ||
+ 	       (content->reshape_active && content->delta_disks > 0 &&
+ 		!enough(content->array.level, (content->array.raid_disks
+ 					       - content->delta_disks),
+-			content->new_layout, 1,
+-			avail)
+-		       )) {
++			content->new_layout, 1, avail))) {
+ 		/* Choose the newest best drive which is
+ 		 * not up-to-date, update the superblock
+ 		 * and add it.
+@@ -1303,8 +1300,8 @@ int Assemble(struct supertype *st, char *mddev,
+ 	int mdfd;
+ 	int clean;
+ 	int auto_assem = (mddev == NULL && !ident->uuid_set &&
+-			  ident->super_minor == UnSet && ident->name[0] == 0
+-			  && (ident->container == NULL || ident->member == NULL));
++			  ident->super_minor == UnSet && ident->name[0] == 0 &&
++			  (ident->container == NULL || ident->member == NULL));
+ 	struct devs *devices;
+ 	char *devmap;
+ 	int *best = NULL; /* indexed by raid_disk */
+diff --git a/Grow.c b/Grow.c
+index a527436..39110b8 100644
+--- a/Grow.c
++++ b/Grow.c
+@@ -813,8 +813,8 @@ static void unfreeze(struct supertype *st)
+ 		char buf[20];
+ 
+ 		if (sra &&
+-		    sysfs_get_str(sra, NULL, "sync_action", buf, 20) > 0
+-		    && strcmp(buf, "frozen\n") == 0)
++		    sysfs_get_str(sra, NULL, "sync_action", buf, 20) > 0 &&
++		    strcmp(buf, "frozen\n") == 0)
+ 			sysfs_set_str(sra, NULL, "sync_action", "idle");
+ 		sysfs_free(sra);
+ 	}
+@@ -2902,8 +2902,8 @@ static int impose_level(int fd, int level, char *devname, int verbose)
+ 			if (disk.major == 0 && disk.minor == 0)
+ 				continue;
+ 			found++;
+-			if ((disk.state & (1 << MD_DISK_ACTIVE))
+-			    && disk.raid_disk < data_disks)
++			if ((disk.state & (1 << MD_DISK_ACTIVE)) &&
++			    disk.raid_disk < data_disks)
+ 				/* keep this */
+ 				continue;
+ 			ioctl(fd, HOT_REMOVE_DISK,
+@@ -2921,8 +2921,8 @@ static int impose_level(int fd, int level, char *devname, int verbose)
+ 			if (disk.major == 0 && disk.minor == 0)
+ 				continue;
+ 			found++;
+-			if ((disk.state & (1 << MD_DISK_ACTIVE))
+-			    && disk.raid_disk < data_disks)
++			if ((disk.state & (1 << MD_DISK_ACTIVE)) &&
++			    disk.raid_disk < data_disks)
+ 				/* keep this */
+ 				continue;
+ 			ioctl(fd, SET_DISK_FAULTY,
+@@ -3597,9 +3597,8 @@ started:
+ 	}
+ 
+ 	if (!st->ss->external &&
+-	    !(reshape.before.data_disks != reshape.after.data_disks
+-	      && info->custom_array_size) &&
+-	    info->new_level == reshape.level &&
++	    !(reshape.before.data_disks != reshape.after.data_disks &&
++	      info->custom_array_size) && info->new_level == reshape.level &&
+ 	    !forked) {
+ 		/* no need to wait for the reshape to finish as
+ 		 * there is nothing more to do.
+@@ -4092,14 +4091,14 @@ int progress_reshape(struct mdinfo *info, struct reshape *reshape,
+ 		 * before setting 'sync_action' to 'idle'.
+ 		 * So we need these extra tests.
+ 		 */
+-		if (completed == 0 && advancing
+-		    && strncmp(action, "idle", 4) == 0
+-		    && info->reshape_progress > 0)
++		if (completed == 0 && advancing &&
++		    strncmp(action, "idle", 4) == 0 &&
++		    info->reshape_progress > 0)
+ 			break;
+-		if (completed == 0 && !advancing
+-		    && strncmp(action, "idle", 4) == 0
+-		    && info->reshape_progress < (info->component_size
+-						 * reshape->after.data_disks))
++		if (completed == 0 && !advancing &&
++		    strncmp(action, "idle", 4) == 0 &&
++		    info->reshape_progress < (info->component_size
++					      * reshape->after.data_disks))
+ 			break;
+ 		sysfs_wait(fd, NULL);
+ 		if (sysfs_fd_get_ll(fd, &completed) < 0)
+@@ -4787,8 +4786,7 @@ int Grow_restart(struct supertype *st, struct mdinfo *info, int *fdlist, int cnt
+ 				/* reshape_progress is increasing */
+ 				if ((__le64_to_cpu(bsb.arraystart)
+ 				     + __le64_to_cpu(bsb.length)
+-				     < info->reshape_progress)
+-				    &&
++				     < info->reshape_progress) &&
+ 				    (__le64_to_cpu(bsb.arraystart2)
+ 				     + __le64_to_cpu(bsb.length2)
+ 				     < info->reshape_progress))
+diff --git a/Manage.c b/Manage.c
+index 467efb7..cee5dad 100644
+--- a/Manage.c
++++ b/Manage.c
+@@ -204,11 +204,9 @@ int Manage_stop(char *devname, int fd, int verbose, int will_retry)
+ 	count = 5;
+ 	while (((fd = ((devname[0] == '/')
+ 		       ?open(devname, O_RDONLY|O_EXCL)
+-		       :open_dev_flags(devnm, O_RDONLY|O_EXCL))) < 0
+-		|| strcmp(fd2devnm(fd), devnm) != 0)
+-	       && container[0]
+-	       && mdmon_running(container)
+-	       && count) {
++		       :open_dev_flags(devnm, O_RDONLY|O_EXCL))) < 0 ||
++		strcmp(fd2devnm(fd), devnm) != 0) && container[0] &&
++	       mdmon_running(container) && count) {
+ 		/* Can't open, so something might be wrong.  However it
+ 		 * is a container, so we might be racing with mdmon, so
+ 		 * retry for a bit.
+@@ -244,8 +242,8 @@ int Manage_stop(char *devname, int fd, int verbose, int will_retry)
+ 		while (count &&
+ 		       (err = sysfs_set_str(mdi, NULL,
+ 					    "array_state",
+-					    "inactive")) < 0
+-		       && errno == EBUSY) {
++					    "inactive")) < 0 &&
++		       errno == EBUSY) {
+ 			usleep(200000);
+ 			count--;
+ 		}
+@@ -447,9 +445,8 @@ done:
+ 	 * so it is reasonable to retry for a while - 5 seconds.
+ 	 */
+ 	count = 25; err = 0;
+-	while (count && fd >= 0
+-	       && (err = ioctl(fd, STOP_ARRAY, NULL)) < 0
+-	       && errno == EBUSY) {
++	while (count && fd >= 0 &&
++	       (err = ioctl(fd, STOP_ARRAY, NULL)) < 0 && errno == EBUSY) {
+ 		usleep(200000);
+ 		count --;
+ 	}
+@@ -795,8 +792,8 @@ int Manage_add(int fd, int tfd, struct mddev_dev *dv,
+ 				break;
+ 			}
+ 		/* FIXME this is a bad test to be using */
+-		if (!tst->sb && (dv->disposition != 'a'
+-				 && dv->disposition != 'S')) {
++		if (!tst->sb && (dv->disposition != 'a' &&
++				 dv->disposition != 'S')) {
+ 			/* we are re-adding a device to a
+ 			 * completely dead array - have to depend
+ 			 * on kernel to check
+@@ -1393,8 +1390,7 @@ int Manage_subdevs(char *devname, int fd,
+ 
+ 		if (strcmp(dv->devname, "failed") == 0 ||
+ 		    strcmp(dv->devname, "faulty") == 0) {
+-			if (dv->disposition != 'A'
+-			    && dv->disposition != 'r') {
++			if (dv->disposition != 'A' && dv->disposition != 'r') {
+ 				pr_err("%s only meaningful with -r or --re-add, not -%c\n",
+ 					dv->devname, dv->disposition);
+ 				goto abort;
+@@ -1499,8 +1495,9 @@ int Manage_subdevs(char *devname, int fd,
+ 					goto abort;
+ 				}
+ 			}
+-		} else if ((dv->disposition == 'r' || dv->disposition == 'f')
+-			   && get_maj_min(dv->devname, &mj, &mn)) {
++		} else if ((dv->disposition == 'r' ||
++			    dv->disposition == 'f') &&
++			   get_maj_min(dv->devname, &mj, &mn)) {
+ 			/* for 'fail' and 'remove', the device might
+ 			 * not exist.
+ 			 */
+diff --git a/managemon.c b/managemon.c
+index 3c1d4cb..0a33fc9 100644
+--- a/managemon.c
++++ b/managemon.c
+@@ -499,9 +499,9 @@ static void manage_member(struct mdstat_ent *mdstat,
+ 		frozen = 1; /* can't read metadata_version assume the worst */
+ 
+ 	/* If sync_action is not 'idle' then don't try recovery now */
+-	if (!frozen
+-	    && sysfs_get_str(&a->info, NULL, "sync_action", buf, sizeof(buf)) > 0
+-	    && strncmp(buf, "idle", 4) != 0)
++	if (!frozen &&
++	    sysfs_get_str(&a->info, NULL, "sync_action",
++			  buf, sizeof(buf)) > 0 && strncmp(buf, "idle", 4) != 0)
+ 		frozen = 1;
+ 
+ 	if (mdstat->level) {
+@@ -626,8 +626,8 @@ static void manage_member(struct mdstat_ent *mdstat,
+ 			newd = xmalloc(sizeof(*newd));
+ 			disk_init_and_add(newd, d, newa);
+ 		}
+-		if (sysfs_get_ll(info, NULL, "array_size", &array_size) == 0
+-		    && a->info.custom_array_size > array_size*2) {
++		if (sysfs_get_ll(info, NULL, "array_size", &array_size) == 0 &&
++		    a->info.custom_array_size > array_size*2) {
+ 			sysfs_set_num(info, NULL, "array_size",
+ 				      a->info.custom_array_size/2);
+ 		}
+diff --git a/mdadm.c b/mdadm.c
+index b689e32..70b16f2 100644
+--- a/mdadm.c
++++ b/mdadm.c
+@@ -1843,8 +1843,7 @@ static int misc_scan(char devmode, struct context *c)
+ 			if (members != member)
+ 				continue;
+ 			me = map_by_devnm(&map, e->devnm);
+-			if (me && me->path
+-			    && strcmp(me->path, "/unknown") != 0)
++			if (me && me->path && strcmp(me->path, "/unknown") != 0)
+ 				name = me->path;
+ 			if (name == NULL || stat(name, &stb) != 0)
+ 				name = get_md_name(e->devnm);
+diff --git a/monitor.c b/monitor.c
+index 00b7c68..81537ed 100644
+--- a/monitor.c
++++ b/monitor.c
+@@ -576,8 +576,8 @@ static int read_and_act(struct active_array *a, fd_set *fds)
+ 		a->last_checkpoint = sync_completed;
+ 		a->container->ss->set_array_state(a, a->curr_state <= clean);
+ 	} else if ((a->curr_action == idle && a->prev_action == reshape) ||
+-		   (a->curr_action == reshape
+-		    && sync_completed > a->last_checkpoint) ) {
++		   (a->curr_action == reshape &&
++		    sync_completed > a->last_checkpoint)) {
+ 		/* Reshape has progressed or completed so we need to
+ 		 * update the array state - and possibly the array size
+ 		 */
+diff --git a/super-ddf.c b/super-ddf.c
+index 50197a8..769eded 100644
+--- a/super-ddf.c
++++ b/super-ddf.c
+@@ -670,8 +670,8 @@ static int layout_md2ddf(const mdu_array_info_t *array,
+ 			sec_elmnt_count = array->raid_disks / 2;
+ 			srl = DDF_2SPANNED;
+ 			prl = DDF_RAID1;
+-		} else if (array->raid_disks % 3 == 0
+-			   && array->layout == 0x103) {
++		} else if (array->raid_disks % 3 == 0 &&
++			   array->layout == 0x103) {
+ 			rlq = DDF_RAID1_MULTI;
+ 			prim_elmnt_count =  cpu_to_be16(3);
+ 			sec_elmnt_count = array->raid_disks / 3;
+@@ -853,8 +853,8 @@ static void *load_section(int fd, struct ddf_super *super, void *buf,
+ 	int dofree = (buf == NULL);
+ 
+ 	if (check)
+-		if (len != 2 && len != 8 && len != 32
+-		    && len != 128 && len != 512)
++		if (len != 2 && len != 8 && len != 32 &&
++		    len != 128 && len != 512)
+ 			return NULL;
+ 
+ 	if (len > 1024)
+@@ -2028,8 +2028,8 @@ static void getinfo_super_ddf(struct supertype *st, struct mdinfo *info, char *m
+ 			       be32_to_cpu(ddf->phys->entries[e].refnum) == 0xffffffff)
+ 				e++;
+ 			if (i < info->array.raid_disks && e < max &&
+-			    !(be16_to_cpu(ddf->phys->entries[e].state)
+-			      & DDF_Failed))
++			    !(be16_to_cpu(ddf->phys->entries[e].state) &
++			      DDF_Failed))
+ 				map[i] = 1;
+ 			else
+ 				map[i] = 0;
+@@ -2114,11 +2114,10 @@ static void getinfo_super_ddf_bvd(struct supertype *st, struct mdinfo *info, cha
+ 	info->resync_start = 0;
+ 	info->reshape_active = 0;
+ 	info->recovery_blocked = 0;
+-	if (!(ddf->virt->entries[info->container_member].state
+-	      & DDF_state_inconsistent)  &&
+-	    (ddf->virt->entries[info->container_member].init_state
+-	     & DDF_initstate_mask)
+-	    == DDF_init_full)
++	if (!(ddf->virt->entries[info->container_member].state &
++	      DDF_state_inconsistent) &&
++	    (ddf->virt->entries[info->container_member].init_state &
++	     DDF_initstate_mask) == DDF_init_full)
+ 		info->resync_start = MaxSector;
+ 
+ 	uuid_from_super_ddf(st, info->uuid);
+@@ -2135,7 +2134,7 @@ static void getinfo_super_ddf_bvd(struct supertype *st, struct mdinfo *info, cha
+ 	if (map)
+ 		for (j = 0; j < map_disks; j++) {
+ 			map[j] = 0;
+-			if (j <  info->array.raid_disks) {
++			if (j < info->array.raid_disks) {
+ 				int i = find_phys(ddf, vc->conf.phys_refnum[j]);
+ 				if (i >= 0 &&
+ 				    (be16_to_cpu(ddf->phys->entries[i].state)
+@@ -4618,9 +4617,9 @@ static void ddf_remove_failed(struct ddf_super *ddf)
+ 		    0xFFFFFFFF)
+ 			continue;
+ 		if (be16_and(ddf->phys->entries[pdnum].state,
+-			     cpu_to_be16(DDF_Failed))
+-		    && be16_and(ddf->phys->entries[pdnum].state,
+-				cpu_to_be16(DDF_Transition))) {
++			     cpu_to_be16(DDF_Failed)) &&
++		    be16_and(ddf->phys->entries[pdnum].state,
++			     cpu_to_be16(DDF_Transition))) {
+ 			/* skip this one unless in dlist*/
+ 			for (dl = ddf->dlist; dl; dl = dl->next)
+ 				if (dl->pdnum == (int)pdnum)
+@@ -5151,8 +5150,8 @@ static struct mdinfo *ddf_activate_spare(struct active_array *a,
+ 		vc = (struct vd_config *)(mu->buf
+ 					  + i_sec * ddf->conf_rec_len * 512);
+ 		for (dl = ddf->dlist; dl; dl = dl->next)
+-			if (dl->major == di->disk.major
+-			    && dl->minor == di->disk.minor)
++			if (dl->major == di->disk.major &&
++			    dl->minor == di->disk.minor)
+ 				break;
+ 		if (!dl || dl->pdnum < 0) {
+ 			pr_err("BUG: can't find disk %d (%d/%d)\n",
+diff --git a/super-intel.c b/super-intel.c
+index 8ca80d3..c84e755 100644
+--- a/super-intel.c
++++ b/super-intel.c
+@@ -4165,8 +4165,8 @@ int check_mpb_migr_compatibility(struct intel_super *super)
+ 			if (pba_of_lba0(map0) != pba_of_lba0(map1))
+ 				/* migration optimization area was used */
+ 				return -1;
+-			if (migr_rec->ascending_migr == 0
+-				&& migr_rec->dest_depth_per_unit > 0)
++			if (migr_rec->ascending_migr == 0 &&
++			    migr_rec->dest_depth_per_unit > 0)
+ 				/* descending reshape not supported yet */
+ 				return -1;
+ 		}
+@@ -6442,7 +6442,7 @@ active_arrays_by_format(char *name, char* hba, struct md_list **devlist,
+ 
+ 	for (memb = mdstat ; memb ; memb = memb->next) {
+ 		if (memb->metadata_version &&
+-		    (strncmp(memb->metadata_version, "external:", 9) == 0)  &&
++		    (strncmp(memb->metadata_version, "external:", 9) == 0) &&
+ 		    (strcmp(&memb->metadata_version[9], name) == 0) &&
+ 		    !is_subarray(memb->metadata_version+9) &&
+ 		    memb->members) {
+@@ -11640,8 +11640,8 @@ static int imsm_manage_reshape(
+ 
+ 	/* Find volume during the reshape */
+ 	for (dv = super->devlist; dv; dv = dv->next) {
+-		if (dv->dev->vol.migr_type == MIGR_GEN_MIGR
+-		    && dv->dev->vol.migr_state == 1) {
++		if (dv->dev->vol.migr_type == MIGR_GEN_MIGR &&
++		    dv->dev->vol.migr_state == 1) {
+ 			dev = dv->dev;
+ 			migr_vol_qan++;
+ 		}
+diff --git a/util.c b/util.c
+index fc9cd3f..0564c0b 100644
+--- a/util.c
++++ b/util.c
+@@ -1014,21 +1014,18 @@ char *get_md_name(char *devnm)
+ 	if (strncmp(devnm, "md_", 3) == 0) {
+ 		snprintf(devname, sizeof(devname), "/dev/md/%s",
+ 			devnm + 3);
+-		if (stat(devname, &stb) == 0
+-		    && (S_IFMT&stb.st_mode) == S_IFBLK
+-		    && (stb.st_rdev == rdev))
++		if (stat(devname, &stb) == 0 &&
++		    (S_IFMT&stb.st_mode) == S_IFBLK && (stb.st_rdev == rdev))
+ 			return devname;
+ 	}
+ 	snprintf(devname, sizeof(devname), "/dev/%s", devnm);
+-	if (stat(devname, &stb) == 0
+-	    && (S_IFMT&stb.st_mode) == S_IFBLK
+-	    && (stb.st_rdev == rdev))
++	if (stat(devname, &stb) == 0 && (S_IFMT&stb.st_mode) == S_IFBLK &&
++	    (stb.st_rdev == rdev))
+ 		return devname;
+ 
+ 	snprintf(devname, sizeof(devname), "/dev/md/%s", devnm+2);
+-	if (stat(devname, &stb) == 0
+-	    && (S_IFMT&stb.st_mode) == S_IFBLK
+-	    && (stb.st_rdev == rdev))
++	if (stat(devname, &stb) == 0 && (S_IFMT&stb.st_mode) == S_IFBLK &&
++	    (stb.st_rdev == rdev))
+ 		return devname;
+ 
+ 	dn = map_dev(major(rdev), minor(rdev), 0);
+@@ -1039,9 +1036,8 @@ char *get_md_name(char *devnm)
+ 		if (errno != EEXIST)
+ 			return NULL;
+ 
+-	if (stat(devname, &stb) == 0
+-	    && (S_IFMT&stb.st_mode) == S_IFBLK
+-	    && (stb.st_rdev == rdev))
++	if (stat(devname, &stb) == 0 && (S_IFMT&stb.st_mode) == S_IFBLK &&
++	    (stb.st_rdev == rdev))
+ 		return devname;
+ 	unlink(devname);
+ 	return NULL;
+-- 
+2.7.4
+

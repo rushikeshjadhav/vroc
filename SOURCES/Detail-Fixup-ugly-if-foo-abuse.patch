@@ -1,0 +1,38 @@
+From 776b199e41d10e344efc47008366ca46715c5acc Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Wed, 12 Apr 2017 17:05:55 -0400
+Subject: [RHEL7.5 PATCH 078/169] Detail: Fixup ugly if () foo() abuse
+
+Cosmetic change only
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Detail.c | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/Detail.c b/Detail.c
+index 8f74832..e40cd8f 100644
+--- a/Detail.c
++++ b/Detail.c
+@@ -141,13 +141,15 @@ int Detail(char *dev, struct context *c)
+ 	}
+ 
+ 	/* try to load a superblock. Try sra->devs first, then try ioctl */
+-	if (st && !info) for (d = 0, subdev = sra ? sra->devs : NULL;
+-			      d < max_disks || subdev;
+-			      subdev ? (void)(subdev = subdev->next) : (void)(d++)){
++	if (st && !info)
++		for (d = 0, subdev = sra ? sra->devs : NULL;
++		     d < max_disks || subdev;
++		     subdev ? (void)(subdev = subdev->next) : (void)(d++)){
+ 		mdu_disk_info_t disk;
+ 		char *dv;
+ 		int fd2;
+ 		int err;
++
+ 		if (subdev)
+ 			disk = subdev->disk;
+ 		else {
+-- 
+2.7.4
+

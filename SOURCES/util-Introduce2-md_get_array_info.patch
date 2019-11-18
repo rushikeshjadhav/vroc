@@ -1,0 +1,416 @@
+From 9cd39f015558dba82c293a4433b481b921ceec87 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Wed, 29 Mar 2017 14:35:41 -0400
+Subject: [RHEL7.5 PATCH 037/169] util: Introduce md_get_array_info()
+
+Remove most direct ioctl calls for GET_ARRAY_INFO, except for one,
+which will be addressed in the next patch.
+
+This is the start of the effort to clean up the use of ioctl calls and
+introduce a more structured API, which will use sysfs and fall back to
+ioctl for backup.
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ Create.c      |  5 ++---
+ Detail.c      |  2 +-
+ Grow.c        | 31 ++++++++++++++++---------------
+ Incremental.c | 11 +++++------
+ Manage.c      | 13 ++++++-------
+ Monitor.c     |  7 ++++---
+ Query.c       |  7 ++++---
+ mdadm.h       |  1 +
+ mdassemble.c  |  2 +-
+ util.c        | 14 +++++++++++---
+ 10 files changed, 51 insertions(+), 42 deletions(-)
+
+diff --git a/Create.c b/Create.c
+index 10e7d10..0e0778f 100644
+--- a/Create.c
++++ b/Create.c
+@@ -156,8 +156,7 @@ int Create(struct supertype *st, char *mddev,
+ 		memset(&inf, 0, sizeof(inf));
+ 		fd = open(devlist->devname, O_RDONLY);
+ 		if (fd >= 0 &&
+-		    ioctl(fd, GET_ARRAY_INFO, &inf) == 0 &&
+-		    inf.raid_disks == 0) {
++		    md_get_array_info(fd, &inf) == 0 && inf.raid_disks == 0) {
+ 			/* yep, looks like a container */
+ 			if (st) {
+ 				rv = st->ss->load_container(st, fd,
+@@ -634,7 +633,7 @@ int Create(struct supertype *st, char *mddev,
+ 	} else {
+ 		mdu_array_info_t inf;
+ 		memset(&inf, 0, sizeof(inf));
+-		ioctl(mdfd, GET_ARRAY_INFO, &inf);
++		md_get_array_info(mdfd, &inf);
+ 		if (inf.working_disks != 0) {
+ 			pr_err("another array by this name is already running.\n");
+ 			goto abort_locked;
+diff --git a/Detail.c b/Detail.c
+index 136875b..d7e886a 100644
+--- a/Detail.c
++++ b/Detail.c
+@@ -107,7 +107,7 @@ int Detail(char *dev, struct context *c)
+ 	external = (sra != NULL && sra->array.major_version == -1
+ 		    && sra->array.minor_version == -2);
+ 	st = super_by_fd(fd, &subarray);
+-	if (ioctl(fd, GET_ARRAY_INFO, &array) == 0) {
++	if (md_get_array_info(fd, &array) == 0) {
+ 		inactive = 0;
+ 	} else if (errno == ENODEV && sra) {
+ 		if (sra->array.major_version == -1 &&
+diff --git a/Grow.c b/Grow.c
+index 6405f0e..4eab5cc 100755
+--- a/Grow.c
++++ b/Grow.c
+@@ -115,7 +115,7 @@ int Grow_Add_device(char *devname, int fd, char *newdev)
+ 	struct supertype *st = NULL;
+ 	char *subarray = NULL;
+ 
+-	if (ioctl(fd, GET_ARRAY_INFO, &info.array) < 0) {
++	if (md_get_array_info(fd, &info.array) < 0) {
+ 		pr_err("cannot get array info for %s\n", devname);
+ 		return 1;
+ 	}
+@@ -221,7 +221,7 @@ int Grow_Add_device(char *devname, int fd, char *newdev)
+ 	 * Now go through and update all superblocks
+ 	 */
+ 
+-	if (ioctl(fd, GET_ARRAY_INFO, &info.array) < 0) {
++	if (md_get_array_info(fd, &info.array) < 0) {
+ 		pr_err("cannot get array info for %s\n", devname);
+ 		return 1;
+ 	}
+@@ -328,7 +328,7 @@ int Grow_addbitmap(char *devname, int fd, struct context *c, struct shape *s)
+ 			devname, bmf.pathname);
+ 		return 1;
+ 	}
+-	if (ioctl(fd, GET_ARRAY_INFO, &array) != 0) {
++	if (md_get_array_info(fd, &array) != 0) {
+ 		pr_err("cannot get array status for %s\n", devname);
+ 		return 1;
+ 	}
+@@ -1784,7 +1784,7 @@ int Grow_reshape(char *devname, int fd,
+ 	struct mdinfo info;
+ 	struct mdinfo *sra;
+ 
+-	if (ioctl(fd, GET_ARRAY_INFO, &array) < 0) {
++	if (md_get_array_info(fd, &array) < 0) {
+ 		pr_err("%s is not an active md array - aborting\n",
+ 			devname);
+ 		return 1;
+@@ -2030,7 +2030,7 @@ int Grow_reshape(char *devname, int fd,
+ 					/* get array parameters after takeover
+ 					 * to change one parameter at time only
+ 					 */
+-					rv = ioctl(fd, GET_ARRAY_INFO, &array);
++					rv = md_get_array_info(fd, &array);
+ 				}
+ 			}
+ 			/* make sure mdmon is
+@@ -2072,7 +2072,7 @@ int Grow_reshape(char *devname, int fd,
+ 			/* go back to raid0, drop parity disk
+ 			 */
+ 			sysfs_set_str(sra, NULL, "level", "raid0");
+-			ioctl(fd, GET_ARRAY_INFO, &array);
++			md_get_array_info(fd, &array);
+ 		}
+ 
+ size_change_error:
+@@ -2101,7 +2101,7 @@ size_change_error:
+ 			    sysfs_set_str(sra, NULL, "resync_start", "none") < 0)
+ 				pr_err("--assume-clean not supported with --grow on this kernel\n");
+ 		}
+-		ioctl(fd, GET_ARRAY_INFO, &array);
++		md_get_array_info(fd, &array);
+ 		s->size = get_component_size(fd)/2;
+ 		if (s->size == 0)
+ 			s->size = array.size;
+@@ -2267,7 +2267,7 @@ size_change_error:
+ 			rv =1 ;
+ 		}
+ 		if (s->layout_str) {
+-			if (ioctl(fd, GET_ARRAY_INFO, &array) != 0) {
++			if (md_get_array_info(fd, &array) != 0) {
+ 				dprintf("Cannot get array information.\n");
+ 				goto release;
+ 			}
+@@ -2830,7 +2830,7 @@ static int impose_reshape(struct mdinfo *sra,
+ 						 * reshape->after.data_disks);
+ 	}
+ 
+-	ioctl(fd, GET_ARRAY_INFO, &array);
++	md_get_array_info(fd, &array);
+ 	if (info->array.chunk_size == info->new_chunk &&
+ 	    reshape->before.layout == reshape->after.layout &&
+ 	    st->ss->external == 0) {
+@@ -2885,7 +2885,7 @@ static int impose_level(int fd, int level, char *devname, int verbose)
+ 	struct mdinfo info;
+ 	sysfs_init(&info, fd, NULL);
+ 
+-	ioctl(fd, GET_ARRAY_INFO, &array);
++	md_get_array_info(fd, &array);
+ 	if (level == 0 &&
+ 	    (array.level >= 4 && array.level <= 6)) {
+ 		/* To convert to RAID0 we need to fail and
+@@ -2921,7 +2921,7 @@ static int impose_level(int fd, int level, char *devname, int verbose)
+ 			      makedev(disk.major, disk.minor));
+ 		}
+ 		/* Now fail anything left */
+-		ioctl(fd, GET_ARRAY_INFO, &array);
++		md_get_array_info(fd, &array);
+ 		for (d = 0, found = 0;
+ 		     d < MAX_DISKS && found < array.nr_disks;
+ 		     d++) {
+@@ -3042,7 +3042,7 @@ static int reshape_array(char *container, int fd, char *devname,
+ 	/* when reshaping a RAID0, the component_size might be zero.
+ 	 * So try to fix that up.
+ 	 */
+-	if (ioctl(fd, GET_ARRAY_INFO, &array) != 0) {
++	if (md_get_array_info(fd, &array) != 0) {
+ 		dprintf("Cannot get array information.\n");
+ 		goto release;
+ 	}
+@@ -3230,7 +3230,7 @@ static int reshape_array(char *container, int fd, char *devname,
+ 		 * some more changes: layout, raid_disks, chunk_size
+ 		 */
+ 		/* read current array info */
+-		if (ioctl(fd, GET_ARRAY_INFO, &array) != 0) {
++		if (md_get_array_info(fd, &array) != 0) {
+ 			dprintf("Cannot get array information.\n");
+ 			goto release;
+ 		}
+@@ -4994,8 +4994,9 @@ int Grow_continue_command(char *devname, int fd,
+ 		int d;
+ 		int cnt = 5;
+ 		dprintf_cont("native array (%s)\n", devname);
+-		if (ioctl(fd, GET_ARRAY_INFO, &array.array) < 0) {
+-			pr_err("%s is not an active md array - aborting\n", devname);
++		if (md_get_array_info(fd, &array.array) < 0) {
++			pr_err("%s is not an active md array - aborting\n",
++			       devname);
+ 			ret_val = 1;
+ 			goto Grow_continue_command_exit;
+ 		}
+diff --git a/Incremental.c b/Incremental.c
+index 81afc7e..1f12c77 100644
+--- a/Incremental.c
++++ b/Incremental.c
+@@ -398,7 +398,7 @@ int Incremental(struct mddev_dev *devlist, struct context *c,
+ 		    && ! policy_action_allows(policy, st->ss->name,
+ 					      act_re_add)
+ 		    && c->runstop < 1) {
+-			if (ioctl(mdfd, GET_ARRAY_INFO, &ainf) == 0) {
++			if (md_get_array_info(mdfd, &ainf) == 0) {
+ 				pr_err("not adding %s to active array (without --run) %s\n",
+ 				       devname, chosen_name);
+ 				rv = 2;
+@@ -549,7 +549,7 @@ int Incremental(struct mddev_dev *devlist, struct context *c,
+ 	/*   + add any bitmap file  */
+ 	/*   + start the array (auto-readonly). */
+ 
+-	if (ioctl(mdfd, GET_ARRAY_INFO, &ainf) == 0) {
++	if (md_get_array_info(mdfd, &ainf) == 0) {
+ 		if (c->export) {
+ 			printf("MD_STARTED=already\n");
+ 		} else if (c->verbose >= 0)
+@@ -664,7 +664,7 @@ static void find_reject(int mdfd, struct supertype *st, struct mdinfo *sra,
+ 	struct mdinfo *d;
+ 	mdu_array_info_t ra;
+ 
+-	if (ioctl(mdfd, GET_ARRAY_INFO, &ra) == 0)
++	if (md_get_array_info(mdfd, &ra) == 0)
+ 		return; /* not safe to remove from active arrays
+ 			 * without thinking more */
+ 
+@@ -837,7 +837,7 @@ static int container_members_max_degradation(struct map_ent *map, struct map_ent
+ 		if (afd < 0)
+ 			continue;
+ 		/* most accurate information regarding array degradation */
+-		if (ioctl(afd, GET_ARRAY_INFO, &array) >= 0) {
++		if (md_get_array_info(afd, &array) >= 0) {
+ 			int degraded = array.raid_disks - array.active_disks -
+ 				       array.spare_disks;
+ 			if (degraded > max_degraded)
+@@ -1390,8 +1390,7 @@ restart:
+ 				rv = 1;
+ 			continue;
+ 		}
+-		if (ioctl(mdfd, GET_ARRAY_INFO, &array) == 0 ||
+-		    errno != ENODEV) {
++		if (md_get_array_info(mdfd, &array) == 0 || errno != ENODEV) {
+ 			close(mdfd);
+ 			continue;
+ 		}
+diff --git a/Manage.c b/Manage.c
+index 55218d9..24ed370 100644
+--- a/Manage.c
++++ b/Manage.c
+@@ -95,7 +95,7 @@ int Manage_ro(char *devname, int fd, int readonly)
+ 		goto out;
+ 	}
+ #endif
+-	if (ioctl(fd, GET_ARRAY_INFO, &array)) {
++	if (md_get_array_info(fd, &array)) {
+ 		pr_err("%s does not appear to be active.\n",
+ 			devname);
+ 		rv = 1;
+@@ -539,7 +539,7 @@ static void add_faulty(struct mddev_dev *dv, int fd, char disp)
+ 	int remaining_disks;
+ 	int i;
+ 
+-	if (ioctl(fd, GET_ARRAY_INFO, &array) != 0)
++	if (md_get_array_info(fd, &array) != 0)
+ 		return;
+ 
+ 	remaining_disks = array.nr_disks;
+@@ -565,7 +565,7 @@ static void add_detached(struct mddev_dev *dv, int fd, char disp)
+ 	int remaining_disks;
+ 	int i;
+ 
+-	if (ioctl(fd, GET_ARRAY_INFO, &array) != 0)
++	if (md_get_array_info(fd, &array) != 0)
+ 		return;
+ 
+ 	remaining_disks = array.nr_disks;
+@@ -602,7 +602,7 @@ static void add_set(struct mddev_dev *dv, int fd, char set_char)
+ 	int copies, set;
+ 	int i;
+ 
+-	if (ioctl(fd, GET_ARRAY_INFO, &array) != 0)
++	if (md_get_array_info(fd, &array) != 0)
+ 		return;
+ 	if (array.level != 10)
+ 		return;
+@@ -1383,9 +1383,8 @@ int Manage_subdevs(char *devname, int fd,
+ 	int busy = 0;
+ 	int raid_slot = -1;
+ 
+-	if (ioctl(fd, GET_ARRAY_INFO, &array)) {
+-		pr_err("Cannot get array info for %s\n",
+-			devname);
++	if (md_get_array_info(fd, &array)) {
++		pr_err("Cannot get array info for %s\n", devname);
+ 		goto abort;
+ 	}
+ 	sysfs_init(&info, fd, NULL);
+diff --git a/Monitor.c b/Monitor.c
+index bdd3e63..0a0a1e2 100644
+--- a/Monitor.c
++++ b/Monitor.c
+@@ -497,7 +497,7 @@ static int check_array(struct state *st, struct mdstat_ent *mdstat,
+ 		return 0;
+ 	}
+ 	fcntl(fd, F_SETFD, FD_CLOEXEC);
+-	if (ioctl(fd, GET_ARRAY_INFO, &array)<0) {
++	if (md_get_array_info(fd, &array) < 0) {
+ 		if (!st->err)
+ 			alert("DeviceDisappeared", dev, NULL, ainfo);
+ 		st->err++;
+@@ -709,9 +709,10 @@ static int add_new_arrays(struct mdstat_ent *mdstat, struct state **statelist,
+ 
+ 			st->devname = xstrdup(name);
+ 			if ((fd = open(st->devname, O_RDONLY)) < 0 ||
+-			    ioctl(fd, GET_ARRAY_INFO, &array)< 0) {
++			    md_get_array_info(fd, &array) < 0) {
+ 				/* no such array */
+-				if (fd >=0) close(fd);
++				if (fd >= 0)
++					close(fd);
+ 				put_md_name(st->devname);
+ 				free(st->devname);
+ 				if (st->metadata) {
+diff --git a/Query.c b/Query.c
+index fbc1d10..cae75d1 100644
+--- a/Query.c
++++ b/Query.c
+@@ -53,9 +53,10 @@ int Query(char *dev)
+ 	}
+ 
+ 	vers = md_get_version(fd);
+-	if (ioctl(fd, GET_ARRAY_INFO, &array)<0)
++	if (md_get_array_info(fd, &array) < 0)
+ 		ioctlerr = errno;
+-	else ioctlerr = 0;
++	else
++		ioctlerr = 0;
+ 
+ 	fstat(fd, &stb);
+ 
+@@ -100,7 +101,7 @@ int Query(char *dev)
+ 			activity = "undetected";
+ 			if (mddev && (fd = open(mddev, O_RDONLY))>=0) {
+ 				if (md_get_version(fd) >= 9000 &&
+-				    ioctl(fd, GET_ARRAY_INFO, &array)>= 0) {
++				    md_get_array_info(fd, &array) >= 0) {
+ 					if (ioctl(fd, GET_DISK_INFO, &disc) >= 0 &&
+ 					    makedev((unsigned)disc.major,(unsigned)disc.minor) == stb.st_rdev)
+ 						activity = "active";
+diff --git a/mdadm.h b/mdadm.h
+index dbf1f92..7770585 100644
+--- a/mdadm.h
++++ b/mdadm.h
+@@ -1405,6 +1405,7 @@ extern int Restore_metadata(char *dev, char *dir, struct context *c,
+ 			    struct supertype *st, int only);
+ 
+ extern int md_get_version(int fd);
++int md_get_array_info(int fd, struct mdu_array_info_s *array);
+ extern int get_linux_version(void);
+ extern int mdadm_version(char *version);
+ extern unsigned long long parse_size(char *size);
+diff --git a/mdassemble.c b/mdassemble.c
+index 471ffeb..a24b324 100644
+--- a/mdassemble.c
++++ b/mdassemble.c
+@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
+ 			if (strcasecmp(array_list->devname, "<ignore>") == 0)
+ 				continue;
+ 			mdfd = open_mddev(array_list->devname, 0);
+-			if (mdfd >= 0 && ioctl(mdfd, GET_ARRAY_INFO, &array) == 0) {
++			if (mdfd >= 0 && md_get_array_info(mdfd, &array) == 0) {
+ 				rv |= Manage_ro(array_list->devname, mdfd, -1); /* make it readwrite */
+ 				continue;
+ 			}
+diff --git a/util.c b/util.c
+index 374015e..725877d 100644
+--- a/util.c
++++ b/util.c
+@@ -212,6 +212,15 @@ int cluster_release_dlmlock(int lockid)
+ #endif
+ 
+ /*
++ * Get array info from the kernel. Longer term we want to deprecate the
++ * ioctl and get it from sysfs.
++ */
++int md_get_array_info(int fd, struct mdu_array_info_s *array)
++{
++	return ioctl(fd, GET_ARRAY_INFO, array);
++}
++
++/*
+  * Parse a 128 bit uuid in 4 integers
+  * format is 32 hexx nibbles with options :.<space> separator
+  * If not exactly 32 hex digits are found, return 0
+@@ -539,8 +548,7 @@ int enough_fd(int fd)
+ 	int i, rv;
+ 	char *avail;
+ 
+-	if (ioctl(fd, GET_ARRAY_INFO, &array) != 0 ||
+-	    array.raid_disks <= 0)
++	if (md_get_array_info(fd, &array) != 0 || array.raid_disks <= 0)
+ 		return 0;
+ 	avail = xcalloc(array.raid_disks, 1);
+ 	for (i = 0; i < MAX_DISKS && array.nr_disks > 0; i++) {
+@@ -1175,7 +1183,7 @@ struct supertype *super_by_fd(int fd, char **subarrayp)
+ 		minor = sra->array.minor_version;
+ 		verstr = sra->text_version;
+ 	} else {
+-		if (ioctl(fd, GET_ARRAY_INFO, &array))
++		if (md_get_array_info(fd, &array))
+ 			array.major_version = array.minor_version = 0;
+ 		vers = array.major_version;
+ 		minor = array.minor_version;
+-- 
+2.7.4
+

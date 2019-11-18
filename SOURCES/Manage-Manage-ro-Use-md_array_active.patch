@@ -1,0 +1,41 @@
+From 80223cb4db3358a24c41a76414a3804c26d5ea3a Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Tue, 2 May 2017 10:40:07 -0400
+Subject: [RHEL7.5 PATCH 102/169] Manage: Manage_ro(): Use
+ md_array_active()
+
+One call less to md_get_array_info() for determining whether an array
+is active or not.
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Manage.c | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/Manage.c b/Manage.c
+index 8966e33..230309b 100644
+--- a/Manage.c
++++ b/Manage.c
+@@ -40,7 +40,6 @@ int Manage_ro(char *devname, int fd, int readonly)
+ 	 * use RESTART_ARRAY_RW or STOP_ARRAY_RO
+ 	 *
+ 	 */
+-	mdu_array_info_t array;
+ 	struct mdinfo *mdi;
+ 	int rv = 0;
+ 
+@@ -88,9 +87,8 @@ int Manage_ro(char *devname, int fd, int readonly)
+ 		goto out;
+ 	}
+ 
+-	if (md_get_array_info(fd, &array)) {
+-		pr_err("%s does not appear to be active.\n",
+-			devname);
++	if (!md_array_active(fd)) {
++		pr_err("%s does not appear to be active.\n", devname);
+ 		rv = 1;
+ 		goto out;
+ 	}
+-- 
+2.7.4
+

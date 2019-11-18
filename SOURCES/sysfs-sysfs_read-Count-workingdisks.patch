@@ -1,0 +1,53 @@
+From 8b0ebd645202b627982eb3ed9fc72583c4f245d3 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Tue, 9 May 2017 17:09:40 -0400
+Subject: [RHEL7.5 PATCH 133/169] sysfs/sysfs_read: Count working_disks
+
+This counts working_disks the same way as get_array_info counts it in
+the kernel.
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ sysfs.c | 15 +++++++++------
+ 1 file changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/sysfs.c b/sysfs.c
+index f7967e8..e47f5e4 100644
+--- a/sysfs.c
++++ b/sysfs.c
+@@ -272,6 +272,7 @@ struct mdinfo *sysfs_read(int fd, char *devnm, unsigned long options)
+ 	sra->array.spare_disks = 0;
+ 	sra->array.active_disks = 0;
+ 	sra->array.failed_disks = 0;
++	sra->array.working_disks = 0;
+ 
+ 	devp = &sra->devs;
+ 	sra->devs = NULL;
+@@ -358,16 +359,18 @@ struct mdinfo *sysfs_read(int fd, char *devnm, unsigned long options)
+ 			strcpy(dbase, "state");
+ 			if (load_sys(fname, buf, sizeof(buf)))
+ 				goto abort;
+-			if (strstr(buf, "in_sync")) {
+-				dev->disk.state |= (1<<MD_DISK_SYNC);
+-				sra->array.active_disks++;
+-			}
+ 			if (strstr(buf, "faulty")) {
+ 				dev->disk.state |= (1<<MD_DISK_FAULTY);
+ 				sra->array.failed_disks++;
++			} else {
++				sra->array.working_disks++;
++				if (strstr(buf, "in_sync")) {
++					dev->disk.state |= (1<<MD_DISK_SYNC);
++					sra->array.active_disks++;
++				}
++				if (dev->disk.state == 0)
++					sra->array.spare_disks++;
+ 			}
+-			if (dev->disk.state == 0)
+-				sra->array.spare_disks++;
+ 		}
+ 		if (options & GET_ERROR) {
+ 			strcpy(buf, "errors");
+-- 
+2.7.4
+

@@ -1,0 +1,91 @@
+From 9db2ab4e9b1ad79b9364b6e03bdd675716a688a5 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Wed, 3 May 2017 14:25:57 -0400
+Subject: [RHEL7.5 PATCH 106/169] util: md_array_valid(): Introduce
+ md_array_valid() helper
+
+Using md_get_array_info() to determine if an array is valid is broken
+during creation, since the ioctl() returns -ENODEV if the device is
+valid but not active.
+
+Where did I leave my stash of brown paper bags?
+
+Fixes: ("40b054e mdopen/open_mddev: Use md_get_array_info() to determine valid array")
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ mdadm.h  |  1 +
+ mdopen.c |  3 +--
+ util.c   | 24 ++++++++++++++++++++++++
+ 3 files changed, 26 insertions(+), 2 deletions(-)
+
+diff --git a/mdadm.h b/mdadm.h
+index 6a382a7..07ee963 100644
+--- a/mdadm.h
++++ b/mdadm.h
+@@ -1415,6 +1415,7 @@ extern int Dump_metadata(char *dev, char *dir, struct context *c,
+ extern int Restore_metadata(char *dev, char *dir, struct context *c,
+ 			    struct supertype *st, int only);
+ 
++int md_array_valid(int fd);
+ int md_array_active(int fd);
+ int md_get_array_info(int fd, struct mdu_array_info_s *array);
+ int md_set_array_info(int fd, struct mdu_array_info_s *array);
+diff --git a/mdopen.c b/mdopen.c
+index 099efa0..c4f1c12 100644
+--- a/mdopen.c
++++ b/mdopen.c
+@@ -442,7 +442,6 @@ int create_mddev(char *dev, char *name, int autof, int trustworthy,
+  */
+ int open_mddev(char *dev, int report_errors)
+ {
+-	struct mdu_array_info_s array;
+ 	int mdfd = open(dev, O_RDONLY);
+ 
+ 	if (mdfd < 0) {
+@@ -452,7 +451,7 @@ int open_mddev(char *dev, int report_errors)
+ 		return -1;
+ 	}
+ 
+-	if (md_get_array_info(mdfd, &array) != 0) {
++	if (md_array_valid(mdfd) == 0) {
+ 		close(mdfd);
+ 		if (report_errors)
+ 			pr_err("%s does not appear to be an md device\n", dev);
+diff --git a/util.c b/util.c
+index 21a63c9..c7585ac 100644
+--- a/util.c
++++ b/util.c
+@@ -200,6 +200,30 @@ out:
+ 	return ret;
+ }
+ 
++int md_array_valid(int fd)
++{
++	struct mdinfo *sra;
++	int ret;
++
++	sra = sysfs_read(fd, NULL, GET_ARRAY_STATE);
++	if (sra) {
++		if (sra->array_state != ARRAY_UNKNOWN_STATE)
++			ret = 0;
++		else
++			ret = -ENODEV;
++
++		free(sra);
++	} else {
++		/*
++		 * GET_ARRAY_INFO doesn't provide access to the proper state
++		 * information, so fallback to a basic check for raid_disks != 0
++		 */
++		ret = ioctl(fd, RAID_VERSION);
++	}
++
++	return !ret;
++}
++
+ int md_array_active(int fd)
+ {
+ 	struct mdinfo *sra;
+-- 
+2.7.4
+

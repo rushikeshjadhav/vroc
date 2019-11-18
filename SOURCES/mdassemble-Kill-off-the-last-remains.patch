@@ -1,0 +1,108 @@
+From 935795398d52a589598fa13e6cb6272619c5d134 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Thu, 4 May 2017 11:57:41 -0400
+Subject: [RHEL7.5 PATCH 108/169] mdassemble: Kill off the last remains
+
+Having gotten rid of mdassemble, lets get rid of the man page too
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ README.initramfs |  9 ++++----
+ mdassemble.8     | 65 --------------------------------------------------------
+ 2 files changed, 4 insertions(+), 70 deletions(-)
+ delete mode 100644 mdassemble.8
+
+diff --git a/README.initramfs b/README.initramfs
+index 8f9b8dd..c5fa668 100644
+--- a/README.initramfs
++++ b/README.initramfs
+@@ -16,11 +16,10 @@ devices.
+ 
+ These mechanisms, while useful, do not provide complete functionality
+ and are unlikely to be extended.  The preferred way to assemble md
+-arrays at boot time is using 'mdadm' or 'mdassemble' (which is a
+-trimmed-down mdadm).  To assemble an array which contains the root
+-filesystem, mdadm needs to be run before that filesystem is mounted,
+-and so needs to be run from an initial-ram-fs.  It is how this can
+-work that is the primary focus of this document.
++arrays at boot time is using 'mdadm'.  To assemble an array which
++contains the root filesystem, mdadm needs to be run before that
++filesystem is mounted, and so needs to be run from an initial-ram-fs.
++It is how this can work that is the primary focus of this document.
+ 
+ It should be noted up front that only the array containing the root
+ filesystem should be assembled from the initramfs.  Any other arrays
+diff --git a/mdassemble.8 b/mdassemble.8
+deleted file mode 100644
+index 33aa977..0000000
+--- a/mdassemble.8
++++ /dev/null
+@@ -1,65 +0,0 @@
+-.\" -*- nroff -*-
+-.TH MDASSEMBLE 8 "" v4.0
+-.SH NAME
+-mdassemble \- assemble MD devices
+-.I aka
+-Linux Software RAID
+-
+-.SH SYNOPSIS
+-
+-.BI mdassemble
+-
+-.SH DESCRIPTION
+-.B mdassemble
+-is a tiny program that can be used to assemble MD devices inside an
+-initial ramdisk (initrd) or initramfs; it is meant to replace the in-kernel
+-automatic RAID detection and activation.
+-It can be built statically and linked against lightweight libc alternatives, like
+-.B dietlibc,
+-.B klibc
+-or
+-.B uClibc.
+-
+-.SH USAGE
+-Invoking
+-.B mdassemble
+-has the same effect as invoking
+-.B mdadm \-\-assemble \-\-scan.
+-.PP
+-Invoking
+-.B mdassemble
+-a second time will make all defined arrays readwrite, this is useful if
+-using the
+-.B start_ro
+-module parameter.
+-
+-.SH OPTIONS
+-
+-There are no options to
+-.B mdassemble.
+-
+-.SH FILES
+-
+-.SS /etc/mdadm.conf
+-
+-The config file lists which devices may be scanned to see if
+-they contain MD super block, and gives identifying information
+-(e.g. UUID) about known MD arrays.  See
+-.BR mdadm.conf (5)
+-for more details.
+-
+-.B mdassemble
+-supports all configuration parameters defined in
+-.B mdadm.conf
+-with the exception of
+-.B auto=
+-which is supported only if mdadm was built with the
+-.B \-DMDASSEMBLE_AUTO
+-define.
+-
+-.SH SEE ALSO
+-.PP
+-.BR mdadm (8),
+-.BR mdadm.conf (5),
+-.BR md (4),
+-.BR diet (1).
+-- 
+2.7.4
+

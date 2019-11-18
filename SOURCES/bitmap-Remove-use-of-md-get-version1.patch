@@ -1,0 +1,26 @@
+From 5d89b18da805cb9ce2b0f726cd534bcbf4dce8c6 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Wed, 5 Apr 2017 15:38:48 -0400
+Subject: [RHEL7.5 PATCH 061/169] bitmap: Remove use of md_get_version()
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ bitmap.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/bitmap.c b/bitmap.c
+index ccedfd3..16a6b73 100644
+--- a/bitmap.c
++++ b/bitmap.c
+@@ -260,7 +260,7 @@ int ExamineBitmap(char *filename, int brief, struct supertype *st)
+ 	if (!info)
+ 		return rv;
+ 	sb = &info->sb;
+-	if (sb->magic != BITMAP_MAGIC && md_get_version(fd) > 0) {
++	if (sb->magic != BITMAP_MAGIC) {
+ 		pr_err("This is an md array.  To view a bitmap you need to examine\n");
+ 		pr_err("a member device, not the array.\n");
+ 		pr_err("Reporting bitmap that would be used if this array were used\n");
+-- 
+2.7.4
+

@@ -1,0 +1,39 @@
+From 3a77acd7170199adc690332ded37c41f067c720e Mon Sep 17 00:00:00 2001
+From: Hannes Reinecke <hare@suse.de>
+Date: Mon, 27 Mar 2017 11:15:44 +1100
+Subject: [RHEL7.5 PATCH 019/169] udev-md-raid-assembly.rules: Skip
+ non-ready devices
+
+If a device isn't fully initialized (e.g if it should be
+handled by multipathing) it should not be considered for
+md/RAID auto-assembly.  Doing so can cause incorrect results
+such as causing multipath to fail during startup.
+
+There is a convention that the udev environment variable
+SYSTEMD_READY be set to zero for such devices.  So change
+the mdadm rules to ignore devices with SYSTEMD_READY==0.
+
+Signed-off-by: Hannes Reinecke <hare@suse.de>
+Signed-off-by: NeilBrown <neilb@suse.com>
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ udev-md-raid-assembly.rules | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/udev-md-raid-assembly.rules b/udev-md-raid-assembly.rules
+index d0d440a..8ca232a 100644
+--- a/udev-md-raid-assembly.rules
++++ b/udev-md-raid-assembly.rules
+@@ -7,6 +7,9 @@ ENV{ANACONDA}=="?*", GOTO="md_inc_end"
+ 
+ SUBSYSTEM!="block", GOTO="md_inc_end"
+ 
++# skip non-initialized devices
++ENV{SYSTEMD_READY}=="0", GOTO="md_inc_end"
++
+ # handle potential components of arrays (the ones supported by md)
+ ENV{ID_FS_TYPE}=="linux_raid_member", GOTO="md_inc"
+ 
+-- 
+2.7.4
+

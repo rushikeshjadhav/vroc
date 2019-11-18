@@ -1,0 +1,51 @@
+From 758b327cf5a7aab50ae5c70ecbc371dc4f715bb6 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jes@wobbly.dhcp.thefacebook.com>
+Date: Thu, 30 Mar 2017 10:39:29 -0400
+Subject: [RHEL7.5 PATCH 042/169] Grow: Remove unnecessary optimization
+
+Per explanation by Neil, this optimization of writing "size" to the
+attribute of each device, however when reducing the size of devices,
+the size change isn't permitted until the array has been shrunk, so
+this will fail anyway.
+
+This effectively reverts 65a9798b58b4e4de0157043e2b30a738c27eff43
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ Grow.c | 12 ------------
+ 1 file changed, 12 deletions(-)
+
+diff --git a/Grow.c b/Grow.c
+index af8d520..0d551ce 100755
+--- a/Grow.c
++++ b/Grow.c
+@@ -1982,15 +1982,7 @@ int Grow_reshape(char *devname, int fd,
+ 		 * understands '0' to mean 'max'.
+ 		 */
+ 		min_csize = 0;
+-		rv = 0;
+ 		for (mdi = sra->devs; mdi; mdi = mdi->next) {
+-			if (sysfs_set_num(sra, mdi, "size",
+-					  s->size == MAX_SIZE ? 0 : s->size) < 0) {
+-				/* Probably kernel refusing to let us
+-				 * reduce the size - not an error.
+-				 */
+-				break;
+-			}
+ 			if (array.not_persistent == 0 &&
+ 			    array.major_version == 0 &&
+ 			    get_linux_version() < 3001000) {
+@@ -2005,10 +1997,6 @@ int Grow_reshape(char *devname, int fd,
+ 				}
+ 			}
+ 		}
+-		if (rv) {
+-			pr_err("Cannot set size on array members.\n");
+-			goto size_change_error;
+-		}
+ 		if (min_csize && s->size > min_csize) {
+ 			pr_err("Cannot safely make this array use more than 2TB per device on this kernel.\n");
+ 			rv = 1;
+-- 
+2.7.4
+

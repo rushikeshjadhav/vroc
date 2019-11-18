@@ -1,0 +1,32 @@
+commit 20dc76d15b40c17b4ccdc3d6283af8ecb513707f
+Author: Mariusz Tkaczyk <mariusz.tkaczyk@intel.com>
+Date:   Tue Oct 3 14:49:49 2017 +0200
+
+    imsm: Set disk slot number
+    
+    If first disk of IMSM RAID1 is failed but still present in the system,
+    the array is not auto-assembled. Auto-assemble uses raid disk slot from
+    metadata to index disks. As it's not set, the valid disk is seen as a
+    replacement disk and its metadata is ignored. The problem is not
+    observed for other RAID levels as they have more than 2 disks -
+    replacement disks are only stored under uneven indexes so third disk
+    metadata is used in such scenario.
+    
+    Signed-off-by: Mariusz Tkaczyk <mariusz.tkaczyk@intel.com>
+    Reviewed-by: Tomasz Majchrzak <tomasz.majchrzak@intel.com>
+    Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+
+diff --git a/super-intel.c b/super-intel.c
+index 536cb61..b561fe2 100644
+--- a/super-intel.c
++++ b/super-intel.c
+@@ -3502,6 +3502,9 @@ static void getinfo_super_imsm(struct supertype *st, struct mdinfo *info, char *
+ 			__u32 ord = get_imsm_ord_tbl_ent(dev, j, MAP_0);
+ 			__u32 idx = ord_to_idx(ord);
+ 
++			if (super->disks && super->disks->index == (int)idx)
++				info->disk.raid_disk = j;
++
+ 			if (!(ord & IMSM_ORD_REBUILD) &&
+ 			    get_imsm_missing(super, idx)) {
+ 				missing = 1;

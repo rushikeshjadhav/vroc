@@ -1,0 +1,80 @@
+From ed1809969802ba03be0a33b7cd9f0ea85c7a42aa Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Wed, 29 Mar 2017 11:55:19 -0400
+Subject: [RHEL7.5 PATCH 033/169] mdadm: Clean up some ugly multiple
+ actions on single line
+
+'foo(); continue;' on the same line within a switch statement is
+always wrong. Get rid of some of it.
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ mdadm.c | 30 ++++++++++++++++++++----------
+ 1 file changed, 20 insertions(+), 10 deletions(-)
+
+diff --git a/mdadm.c b/mdadm.c
+index 5ebf117..502e721 100644
+--- a/mdadm.c
++++ b/mdadm.c
+@@ -1928,16 +1928,21 @@ static int misc_list(struct mddev_dev *devlist,
+ 			}
+ 			continue;
+ 		case 'Q':
+-			rv |= Query(dv->devname); continue;
++			rv |= Query(dv->devname);
++			continue;
+ 		case 'X':
+-			rv |= ExamineBitmap(dv->devname, c->brief, ss); continue;
++			rv |= ExamineBitmap(dv->devname, c->brief, ss);
++			continue;
+ 		case ExamineBB:
+-			rv |= ExamineBadblocks(dv->devname, c->brief, ss); continue;
++			rv |= ExamineBadblocks(dv->devname, c->brief, ss);
++			continue;
+ 		case 'W':
+ 		case WaitOpt:
+-			rv |= Wait(dv->devname); continue;
++			rv |= Wait(dv->devname);
++			continue;
+ 		case Waitclean:
+-			rv |= WaitClean(dv->devname, -1, c->verbose); continue;
++			rv |= WaitClean(dv->devname, -1, c->verbose);
++			continue;
+ 		case KillSubarray:
+ 			rv |= Kill_subarray(dv->devname, c->subarray, c->verbose);
+ 			continue;
+@@ -1964,7 +1969,8 @@ static int misc_list(struct mddev_dev *devlist,
+ 		switch(dv->devname[0] == '/') {
+ 			case 0:
+ 				mdfd = open_dev(dv->devname);
+-				if (mdfd >= 0) break;
++				if (mdfd >= 0)
++					break;
+ 			case 1:
+ 				mdfd = open_mddev(dv->devname, 1);  
+ 		}
+@@ -1972,13 +1978,17 @@ static int misc_list(struct mddev_dev *devlist,
+ 			switch(dv->disposition) {
+ 			case 'R':
+ 				c->runstop = 1;
+-				rv |= Manage_run(dv->devname, mdfd, c); break;
++				rv |= Manage_run(dv->devname, mdfd, c);
++				break;
+ 			case 'S':
+-				rv |= Manage_stop(dv->devname, mdfd, c->verbose, 0); break;
++				rv |= Manage_stop(dv->devname, mdfd, c->verbose, 0);
++				break;
+ 			case 'o':
+-				rv |= Manage_ro(dv->devname, mdfd, 1); break;
++				rv |= Manage_ro(dv->devname, mdfd, 1);
++				break;
+ 			case 'w':
+-				rv |= Manage_ro(dv->devname, mdfd, -1); break;
++				rv |= Manage_ro(dv->devname, mdfd, -1);
++				break;
+ 			}
+ 			close(mdfd);
+ 		} else
+-- 
+2.7.4
+

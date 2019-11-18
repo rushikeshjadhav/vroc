@@ -1,0 +1,36 @@
+From 72b616aff26e64079727ea908073027c08f99c07 Mon Sep 17 00:00:00 2001
+From: Zhilong Liu <zlliu@suse.com>
+Date: Tue, 7 Mar 2017 11:13:03 +0800
+Subject: [RHEL7.5 PATCH 008/169] mdadm:add checking clustered bitmap in
+ assemble mode
+
+mdadm:Both clustered and internal array don't need
+to specify --bitmap when assembling array.
+
+Signed-off-by: Zhilong Liu <zlliu@suse.com>
+Acked-by: Coly Li <colyli@suse.de>
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ mdadm.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/mdadm.c b/mdadm.c
+index b5ac061..d6ad8dc 100644
+--- a/mdadm.c
++++ b/mdadm.c
+@@ -1095,8 +1095,10 @@ int main(int argc, char *argv[])
+ 				pr_err("bitmap file needed with -b in --assemble mode\n");
+ 				exit(2);
+ 			}
+-			if (strcmp(optarg, "internal") == 0) {
+-				pr_err("there is no need to specify --bitmap when assembling arrays with internal bitmaps\n");
++			if (strcmp(optarg, "internal") == 0 ||
++			    strcmp(optarg, "clustered") == 0) {
++				pr_err("no need to specify --bitmap when assembling"
++					" arrays with internal or clustered bitmap\n");
+ 				continue;
+ 			}
+ 			bitmap_fd = open(optarg, O_RDWR);
+-- 
+2.7.4
+

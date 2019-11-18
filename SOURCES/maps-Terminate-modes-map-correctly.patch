@@ -1,0 +1,28 @@
+From e47781fcea24778a16e4be53e5b84eab8db9413c Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Thu, 20 Apr 2017 00:13:31 -0400
+Subject: [RHEL7.5 PATCH 083/169] maps: Terminate 'modes' map correctly.
+
+While we are unlikely to fail here, terminate the modes map correctly
+to ensure we don't start running over undefined data.
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ maps.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/maps.c b/maps.c
+index a8a4639..a2d293b 100644
+--- a/maps.c
++++ b/maps.c
+@@ -106,6 +106,7 @@ mapping_t modes[] = {
+ 	{ "grow", GROW},
+ 	{ "incremental", INCREMENTAL},
+ 	{ "auto-detect", AUTODETECT},
++	{ NULL, 0 }
+ };
+ 
+ mapping_t faultylayout[] = {
+-- 
+2.7.4
+

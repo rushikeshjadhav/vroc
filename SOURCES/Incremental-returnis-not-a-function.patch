@@ -1,0 +1,26 @@
+From c2d1a6ec6b94385e64e721b733bd44d1d704b530 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Fri, 5 May 2017 11:39:58 -0400
+Subject: [RHEL7.5 PATCH 112/169] Incremental: return is not a function
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Incremental.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Incremental.c b/Incremental.c
+index 97b2e99..c00a43d 100644
+--- a/Incremental.c
++++ b/Incremental.c
+@@ -823,7 +823,7 @@ static int container_members_max_degradation(struct map_ent *map, struct map_ent
+ 		}
+ 		close(afd);
+ 	}
+-	return (max_degraded);
++	return max_degraded;
+ }
+ 
+ static int array_try_spare(char *devname, int *dfdp, struct dev_policy *pol,
+-- 
+2.7.4
+

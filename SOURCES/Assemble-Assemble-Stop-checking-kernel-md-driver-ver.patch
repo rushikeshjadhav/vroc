@@ -1,0 +1,31 @@
+From 6142741d144824c31b733f9d6e6e240b159effc0 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Wed, 5 Apr 2017 15:09:18 -0400
+Subject: [RHEL7.5 PATCH 054/169] Assemble/Assemble: Stop checking kernel
+ md driver version
+
+Any kernel released during the last decade will return 9003 from
+md_get_version() so no point in checking that.
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ Assemble.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/Assemble.c b/Assemble.c
+index 672cd12..fa5fdbe 100644
+--- a/Assemble.c
++++ b/Assemble.c
+@@ -1477,8 +1477,7 @@ try_again:
+ 		return 1;
+ 	}
+ 	mddev = chosen_name;
+-	if (get_linux_version() < 2004000 ||
+-	    md_get_version(mdfd) < 9000) {
++	if (get_linux_version() < 2004000) {
+ 		pr_err("Assemble requires Linux 2.4 or later, and\n"
+ 		       "     md driver version 0.90.0 or later.\n"
+ 		       "    Upgrade your kernel or try --build\n");
+-- 
+2.7.4
+

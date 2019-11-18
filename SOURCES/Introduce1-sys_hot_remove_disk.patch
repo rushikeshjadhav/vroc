@@ -1,0 +1,74 @@
+From fdd015696c2e2a6b234a92af564aea44b62e6a0d Mon Sep 17 00:00:00 2001
+From: NeilBrown <neilb@suse.com>
+Date: Mon, 27 Mar 2017 14:36:56 +1100
+Subject: [RHEL7.5 PATCH 022/169] Introduce sys_hot_remove_disk()
+
+The new hot_remove_disk() will retry HOT_REMOVE_DISK
+several times in the face of EBUSY.
+However we sometimes remove a device by writing "remove" to the
+"state" attributed.  This should be retried as well.
+So introduce sys_hot_remove_disk() to repeat this action a few times.
+
+Signed-off-by: NeilBrown <neilb@suse.com>
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ Manage.c |  6 +-----
+ mdadm.h  |  1 +
+ util.c   | 12 ++++++++++++
+ 3 files changed, 14 insertions(+), 5 deletions(-)
+
+diff --git a/Manage.c b/Manage.c
+index 9139f96..edf5798 100644
+--- a/Manage.c
++++ b/Manage.c
+@@ -1177,11 +1177,7 @@ int Manage_remove(struct supertype *tst, int fd, struct mddev_dev *dv,
+ 		/* device has been removed and we don't know
+ 		 * the major:minor number
+ 		 */
+-		int n = write(sysfd, "remove", 6);
+-		if (n != 6)
+-			err = -1;
+-		else
+-			err = 0;
++		err = sys_hot_remove_disk(sysfd);
+ 	} else {
+ 		err = hot_remove_disk(fd, rdev);
+ 		if (err && errno == ENODEV) {
+diff --git a/mdadm.h b/mdadm.h
+index 5bcfb86..b855d24 100644
+--- a/mdadm.h
++++ b/mdadm.h
+@@ -1477,6 +1477,7 @@ extern int add_disk(int mdfd, struct supertype *st,
+ extern int remove_disk(int mdfd, struct supertype *st,
+ 		       struct mdinfo *sra, struct mdinfo *info);
+ extern int hot_remove_disk(int mdfd, unsigned long dev);
++extern int sys_hot_remove_disk(int statefd);
+ extern int set_array_info(int mdfd, struct supertype *st, struct mdinfo *info);
+ unsigned long long min_recovery_start(struct mdinfo *array);
+ 
+diff --git a/util.c b/util.c
+index d09a7e2..b718531 100644
+--- a/util.c
++++ b/util.c
+@@ -1813,6 +1813,18 @@ int hot_remove_disk(int mdfd, unsigned long dev)
+ 	return ret;
+ }
+ 
++int sys_hot_remove_disk(int statefd)
++{
++	int cnt = 5;
++	int ret;
++
++	while ((ret = write(statefd, "remove", 6)) == -1 &&
++	       errno == EBUSY &&
++	       cnt-- > 0)
++		usleep(10000);
++	return ret == 6 ? 0 : -1;
++}
++
+ int set_array_info(int mdfd, struct supertype *st, struct mdinfo *info)
+ {
+ 	/* Initialise kernel's knowledge of array.
+-- 
+2.7.4
+

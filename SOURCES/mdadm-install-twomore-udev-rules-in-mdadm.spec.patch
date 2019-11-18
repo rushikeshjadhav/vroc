@@ -1,0 +1,32 @@
+From 52f6a11ec800114164a5b6866548109e0cbf8578 Mon Sep 17 00:00:00 2001
+From: Song Liu <songliubraving@fb.com>
+Date: Mon, 28 Aug 2017 15:20:35 -0700
+Subject: [RHEL7.5 PATCH 02/13] mdadm: install two more udev rules in
+ mdadm.spec
+
+To avoid rpmbuild error.
+
+Signed-off-by: Song Liu <songliubraving@fb.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ mdadm.spec | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/mdadm.spec b/mdadm.spec
+index 4e97efb..4e6f870 100644
+--- a/mdadm.spec
++++ b/mdadm.spec
+@@ -37,8 +37,10 @@ rm -rf $RPM_BUILD_ROOT
+ %doc TODO ChangeLog mdadm.conf-example COPYING
+ %{_sbindir}/mdadm
+ %{_sbindir}/mdmon
++/usr/lib/udev/rules.d/01-md-raid-creating.rules
+ /usr/lib/udev/rules.d/63-md-raid-arrays.rules
+ /usr/lib/udev/rules.d/64-md-raid-assembly.rules
++/usr/lib/udev/rules.d/69-md-clustered-confirm-device.rules
+ %config(noreplace,missingok)/%{_sysconfdir}/mdadm.conf
+ %{_mandir}/man*/md*
+ 
+-- 
+2.7.4
+

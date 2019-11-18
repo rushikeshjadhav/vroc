@@ -1,0 +1,32 @@
+From dcf3d4de95d1a4cbc65b24a844173ba1c1300b55 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Thu, 6 Apr 2017 15:46:31 -0400
+Subject: [RHEL7.5 PATCH 067/169] mdadm: Fail for kernels older than 2.6.15
+
+With the removal of old kernel API support, mdadm will no longer run
+on kernels older than 2.6.15.
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ mdadm.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/mdadm.c b/mdadm.c
+index 3fe17fc..001ff68 100644
+--- a/mdadm.c
++++ b/mdadm.c
+@@ -120,6 +120,11 @@ int main(int argc, char *argv[])
+ 	ident.container = NULL;
+ 	ident.member = NULL;
+ 
++	if (get_linux_version() < 2006015) {
++		pr_err("This version of mdadm does not support kernels older than 2.6.15\n");
++		exit(1);
++	}
++
+ 	while ((option_index = -1),
+ 	       (opt = getopt_long(argc, argv, shortopt, long_options,
+ 				  &option_index)) != -1) {
+-- 
+2.7.4
+

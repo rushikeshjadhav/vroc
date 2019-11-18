@@ -1,0 +1,71 @@
+From b98943a4f889b466a3d07264068042b18c620d33 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Tue, 9 May 2017 17:03:03 -0400
+Subject: [RHEL7.5 PATCH 132/169] Monitor/check_array: Get nr_disks,
+ active_disks and spare_disks from sysfs
+
+This leaves working_disks and utime missing before we can eliminate
+check_array()'s call to md_get_array_info()
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Monitor.c | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/Monitor.c b/Monitor.c
+index fe6f2b4..2204528 100644
+--- a/Monitor.c
++++ b/Monitor.c
+@@ -482,7 +482,7 @@ static int check_array(struct state *st, struct mdstat_ent *mdstat,
+ 		strcpy(st->devnm, fd2devnm(fd));
+ 
+ 	sra = sysfs_read(-1, st->devnm, GET_LEVEL | GET_DISKS | GET_DEGRADED |
+-			 GET_MISMATCH);
++			 GET_MISMATCH | GET_DEVS | GET_STATE);
+ 	if (!sra)
+ 		goto disappeared;
+ 
+@@ -525,7 +525,7 @@ static int check_array(struct state *st, struct mdstat_ent *mdstat,
+ 
+ 	if (st->utime == array.utime && st->failed == sra->array.failed_disks &&
+ 	    st->working == array.working_disks &&
+-	    st->spare == array.spare_disks &&
++	    st->spare == sra->array.spare_disks &&
+ 	    (mse == NULL  || (mse->percent == st->percent))) {
+ 		if ((st->active < st->raid) && st->spare == 0)
+ 			retval = 1;
+@@ -535,8 +535,8 @@ static int check_array(struct state *st, struct mdstat_ent *mdstat,
+ 	    mse->pattern && strchr(mse->pattern, '_') /* degraded */)
+ 		alert("DegradedArray", dev, NULL, ainfo);
+ 
+-	if (st->utime == 0 && /* new array */
+-	    st->expected_spares > 0 && array.spare_disks < st->expected_spares)
++	if (st->utime == 0 && /* new array */ st->expected_spares > 0 &&
++	    sra->array.spare_disks < st->expected_spares)
+ 		alert("SparesMissing", dev, NULL, ainfo);
+ 	if (st->percent < 0 && st->percent != RESYNC_UNKNOWN &&
+ 	    mse->percent >= 0)
+@@ -574,7 +574,7 @@ static int check_array(struct state *st, struct mdstat_ent *mdstat,
+ 	}
+ 	st->percent = mse->percent;
+ 
+-	remaining_disks = array.nr_disks;
++	remaining_disks = sra->array.nr_disks;
+ 	for (i = 0; i < MAX_DISKS && remaining_disks > 0; i++) {
+ 		mdu_disk_info_t disc;
+ 		disc.number = i;
+@@ -636,9 +636,9 @@ static int check_array(struct state *st, struct mdstat_ent *mdstat,
+ 		st->devstate[i] = newstate;
+ 		st->devid[i] = makedev(disc.major, disc.minor);
+ 	}
+-	st->active = array.active_disks;
++	st->active = sra->array.active_disks;
+ 	st->working = array.working_disks;
+-	st->spare = array.spare_disks;
++	st->spare = sra->array.spare_disks;
+ 	st->failed = sra->array.failed_disks;
+ 	st->utime = array.utime;
+ 	st->raid = sra->array.raid_disks;
+-- 
+2.7.4
+

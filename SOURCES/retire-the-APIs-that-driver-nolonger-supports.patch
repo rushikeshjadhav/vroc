@@ -1,0 +1,51 @@
+From e644902ddbc66d58a3fd4353c9539276ee1fabd7 Mon Sep 17 00:00:00 2001
+From: Zhilong Liu <zlliu@suse.com>
+Date: Thu, 11 May 2017 16:52:41 +0800
+Subject: [RHEL7.5 PATCH 136/169] retire the APIs that driver no longer
+ supports
+
+refer to commit: e6e5f8f1267d ("Build: Stop
+bothering about supporting md driver ...")
+continue to retire the APIs that md driver
+wasn't supported for very long period of time.
+
+Signed-off-by: Zhilong Liu <zlliu@suse.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Build.c  | 4 ----
+ Manage.c | 4 ----
+ 2 files changed, 8 deletions(-)
+
+diff --git a/Build.c b/Build.c
+index ad59867..70ba068 100644
+--- a/Build.c
++++ b/Build.c
+@@ -24,10 +24,6 @@
+ 
+ #include "mdadm.h"
+ 
+-#define REGISTER_DEV		_IO (MD_MAJOR, 1)
+-#define START_MD		_IO (MD_MAJOR, 2)
+-#define STOP_MD			_IO (MD_MAJOR, 3)
+-
+ int Build(char *mddev, struct mddev_dev *devlist,
+ 	  struct shape *s, struct context *c)
+ {
+diff --git a/Manage.c b/Manage.c
+index 14276b7..467efb7 100644
+--- a/Manage.c
++++ b/Manage.c
+@@ -27,10 +27,6 @@
+ #include "md_p.h"
+ #include <ctype.h>
+ 
+-#define REGISTER_DEV		_IO (MD_MAJOR, 1)
+-#define START_MD		_IO (MD_MAJOR, 2)
+-#define STOP_MD			_IO (MD_MAJOR, 3)
+-
+ int Manage_ro(char *devname, int fd, int readonly)
+ {
+ 	/* switch to readonly or rw
+-- 
+2.7.4
+

@@ -1,0 +1,31 @@
+From b6e60be6281a2a4ec326a72de114867797a42d7f Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Wed, 5 Apr 2017 15:47:37 -0400
+Subject: [RHEL7.5 PATCH 065/169] Assemble/Assemble: Get rid of last use of
+ md_get_version()
+
+At this point in the code, we know we have a valid array, and any
+recent kernel will return 9003, so no point in querying the kernel for
+this.
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ Assemble.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Assemble.c b/Assemble.c
+index fa5fdbe..0db428f 100644
+--- a/Assemble.c
++++ b/Assemble.c
+@@ -1901,7 +1901,7 @@ int assemble_container_content(struct supertype *st, int mdfd,
+ 		    c->readonly &&
+ 		    content->text_version[0] == '/')
+ 			content->text_version[0] = '-';
+-		if (sysfs_set_array(content, md_get_version(mdfd)) != 0) {
++		if (sysfs_set_array(content, 9003) != 0) {
+ 			sysfs_free(sra);
+ 			return 1;
+ 		}
+-- 
+2.7.4
+

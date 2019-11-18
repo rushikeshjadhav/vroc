@@ -1,0 +1,37 @@
+From f5c924f441cedce2a13c48b12be35250560ee575 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Wed, 5 Apr 2017 14:01:30 -0400
+Subject: [RHEL7.5 PATCH 052/169] util/must_be_container: Use
+ sysfs_read(GET_VERSION) to determine valid array
+
+Use sysfs_read() instead of ioctl(RAID_VERSION) to determine this is
+in fact a valid raid array fd.
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ util.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/util.c b/util.c
+index 9fc7ba0..56daee3 100644
+--- a/util.c
++++ b/util.c
+@@ -1376,9 +1376,14 @@ int get_dev_sector_size(int fd, char *dname, unsigned int *sectsizep)
+  */
+ int must_be_container(int fd)
+ {
++	struct mdinfo *mdi;
+ 	unsigned long long size;
+-	if (md_get_version(fd) < 0)
++
++	mdi = sysfs_read(fd, NULL, GET_VERSION);
++	if (!mdi)
+ 		return 0;
++	sysfs_free(mdi);
++
+ 	if (get_dev_size(fd, NULL, &size) == 0)
+ 		return 1;
+ 	if (size == 0)
+-- 
+2.7.4
+

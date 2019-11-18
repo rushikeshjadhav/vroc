@@ -1,0 +1,32 @@
+From 98e96bdbefaf0bf1c3d4161862af1ab6d03da1db Mon Sep 17 00:00:00 2001
+From: Artur Paszkiewicz <artur.paszkiewicz@intel.com>
+Date: Thu, 28 Sep 2017 14:41:16 +0200
+Subject: [PATCH 10/12] imsm: always do ppl recovery when starting a
+ rebuilding array
+
+Set resync_start to 0 when starting a rebuilding array to make the
+kernel perform ppl recovery before the rebuild.
+
+Signed-off-by: Artur Paszkiewicz <artur.paszkiewicz@intel.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ super-intel.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/super-intel.c b/super-intel.c
+index 501d0c3..996d133 100644
+--- a/super-intel.c
++++ b/super-intel.c
+@@ -7756,6 +7756,9 @@ static struct mdinfo *container_content_imsm(struct supertype *st, char *subarra
+ 						map->blocks_per_strip;
+ 				info_d->ppl_sector = this->ppl_sector;
+ 				info_d->ppl_size = this->ppl_size;
++				if (this->consistency_policy == CONSISTENCY_POLICY_PPL &&
++				    recovery_start == 0)
++					this->resync_start = 0;
+ 			} else {
+ 				info_d->component_size = blocks_per_member(map);
+ 			}
+-- 
+2.7.4
+

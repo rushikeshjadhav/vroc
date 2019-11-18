@@ -1,0 +1,134 @@
+From b251424242b46d62f666829c0e7a7550768fc8de Mon Sep 17 00:00:00 2001
+From: Pawel Baldysiak <pawel.baldysiak@intel.com>
+Date: Thu, 28 Sep 2017 14:41:11 +0200
+Subject: [PATCH 05/12] Zeroout whole ppl space during creation/force
+ assemble
+
+PPL area should be cleared before creation/force assemble.
+If the drive was used in other RAID array, it might contains PPL from it.
+There is a risk that mdadm recognizes those PPLs and
+refuses to assemble the RAID due to PPL conflict with created
+array.
+
+Signed-off-by: Pawel Baldysiak <pawel.baldysiak@intel.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ mdadm.h       |  1 +
+ super-intel.c |  7 ++++++-
+ super1.c      |  5 +++++
+ util.c        | 49 +++++++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 61 insertions(+), 1 deletion(-)
+
+diff --git a/mdadm.h b/mdadm.h
+index 3fc8a4f..85947bf 100644
+--- a/mdadm.h
++++ b/mdadm.h
+@@ -687,6 +687,7 @@ extern int sysfs_unique_holder(char *devnm, long rdev);
+ extern int sysfs_freeze_array(struct mdinfo *sra);
+ extern int sysfs_wait(int fd, int *msec);
+ extern int load_sys(char *path, char *buf, int len);
++extern int zero_disk_range(int fd, unsigned long long sector, size_t count);
+ extern int reshape_prepare_fdlist(char *devname,
+ 				  struct mdinfo *sra,
+ 				  int raid_disks,
+diff --git a/super-intel.c b/super-intel.c
+index 56dec36..65cdc92 100644
+--- a/super-intel.c
++++ b/super-intel.c
+@@ -6065,7 +6065,12 @@ static int write_init_ppl_imsm(struct supertype *st, struct mdinfo *info, int fd
+ 	struct ppl_header *ppl_hdr;
+ 	int ret;
+ 
+-	ret = posix_memalign(&buf, 4096, PPL_HEADER_SIZE);
++	/* first clear entire ppl space */
++	ret = zero_disk_range(fd, info->ppl_sector, info->ppl_size);
++	if (ret)
++		return ret;
++
++	ret = posix_memalign(&buf, MAX_SECTOR_SIZE, PPL_HEADER_SIZE);
+ 	if (ret) {
+ 		pr_err("Failed to allocate PPL header buffer\n");
+ 		return ret;
+diff --git a/super1.c b/super1.c
+index f80e38a..7ae6dc3 100644
+--- a/super1.c
++++ b/super1.c
+@@ -1823,6 +1823,11 @@ static int write_init_ppl1(struct supertype *st, struct mdinfo *info, int fd)
+ 	struct ppl_header *ppl_hdr;
+ 	int ret;
+ 
++	/* first clear entire ppl space */
++	ret = zero_disk_range(fd, info->ppl_sector, info->ppl_size);
++	if (ret)
++		return ret;
++
+ 	ret = posix_memalign(&buf, 4096, PPL_HEADER_SIZE);
+ 	if (ret) {
+ 		pr_err("Failed to allocate PPL header buffer\n");
+diff --git a/util.c b/util.c
+index 68af381..c11729e 100644
+--- a/util.c
++++ b/util.c
+@@ -30,6 +30,7 @@
+ #include	<sys/un.h>
+ #include	<sys/resource.h>
+ #include	<sys/vfs.h>
++#include	<sys/mman.h>
+ #include	<linux/magic.h>
+ #include	<poll.h>
+ #include	<ctype.h>
+@@ -2334,3 +2335,51 @@ void set_hooks(void)
+ 	set_dlm_hooks();
+ 	set_cmap_hooks();
+ }
++
++int zero_disk_range(int fd, unsigned long long sector, size_t count)
++{
++	int ret = 0;
++	int fd_zero;
++	void *addr = NULL;
++	size_t written = 0;
++	size_t len = count * 512;
++	ssize_t n;
++
++	fd_zero = open("/dev/zero", O_RDONLY);
++	if (fd_zero < 0) {
++		pr_err("Cannot open /dev/zero\n");
++		return -1;
++	}
++
++	if (lseek64(fd, sector * 512, SEEK_SET) < 0) {
++		ret = -errno;
++		pr_err("Failed to seek offset for zeroing\n");
++		goto out;
++	}
++
++	addr = mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd_zero, 0);
++
++	if (addr == MAP_FAILED) {
++		ret = -errno;
++		pr_err("Mapping /dev/zero failed\n");
++		goto out;
++	}
++
++	do {
++		n = write(fd, addr + written, len - written);
++		if (n < 0) {
++			if (errno == EINTR)
++				continue;
++			ret = -errno;
++			pr_err("Zeroing disk range failed\n");
++			break;
++		}
++		written += n;
++	} while (written != len);
++
++	munmap(addr, len);
++
++out:
++	close(fd_zero);
++	return ret;
++}
+-- 
+2.7.4
+

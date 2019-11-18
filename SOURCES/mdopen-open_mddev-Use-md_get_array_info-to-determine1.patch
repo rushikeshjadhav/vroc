@@ -1,0 +1,46 @@
+From 40b054e1dc9e334621fd2081bf6fc46b01dd7ef4 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Wed, 5 Apr 2017 15:44:20 -0400
+Subject: [RHEL7.5 PATCH 063/169] mdopen/open_mddev: Use
+ md_get_array_info() to determine valid array
+
+md_get_array_info() can be used instead of md_get_version() to
+determine this is in fact a valid array.
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ mdopen.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/mdopen.c b/mdopen.c
+index 685ca32..fe240e5 100644
+--- a/mdopen.c
++++ b/mdopen.c
+@@ -416,19 +416,23 @@ int create_mddev(char *dev, char *name, int autof, int trustworthy,
+  */
+ int open_mddev(char *dev, int report_errors)
+ {
++	struct mdu_array_info_s array;
+ 	int mdfd = open(dev, O_RDONLY);
++
+ 	if (mdfd < 0) {
+ 		if (report_errors)
+ 			pr_err("error opening %s: %s\n",
+ 				dev, strerror(errno));
+ 		return -1;
+ 	}
+-	if (md_get_version(mdfd) <= 0) {
++
++	if (md_get_array_info(mdfd, &array) != 0) {
+ 		close(mdfd);
+ 		if (report_errors)
+ 			pr_err("%s does not appear to be an md device\n", dev);
+ 		return -2;
+ 	}
++
+ 	return mdfd;
+ }
+ 
+-- 
+2.7.4
+

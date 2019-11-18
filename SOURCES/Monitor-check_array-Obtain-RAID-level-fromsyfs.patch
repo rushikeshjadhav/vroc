@@ -1,0 +1,44 @@
+From 48bc2ade86db576036375184774a3ebadf6a22e3 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Tue, 9 May 2017 16:52:44 -0400
+Subject: [RHEL7.5 PATCH 129/169] Monitor/check_array: Obtain RAID level
+ from syfs
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Monitor.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/Monitor.c b/Monitor.c
+index 75aea91..b94fd7c 100644
+--- a/Monitor.c
++++ b/Monitor.c
+@@ -481,14 +481,14 @@ static int check_array(struct state *st, struct mdstat_ent *mdstat,
+ 	if (st->devnm[0] == 0)
+ 		strcpy(st->devnm, fd2devnm(fd));
+ 
+-	sra = sysfs_read(-1, st->devnm, GET_MISMATCH);
++	sra = sysfs_read(-1, st->devnm, GET_LEVEL | GET_MISMATCH);
+ 	if (!sra)
+ 		goto disappeared;
+ 
+ 	/* It's much easier to list what array levels can't
+ 	 * have a device disappear than all of them that can
+ 	 */
+-	if (array.level == 0 || array.level == -1) {
++	if (sra->array.level == 0 || sra->array.level == -1) {
+ 		if (!st->err && !st->from_config)
+ 			alert("DeviceDisappeared", dev, " Wrong-Level", ainfo);
+ 		st->err++;
+@@ -566,7 +566,7 @@ static int check_array(struct state *st, struct mdstat_ent *mdstat,
+ 			char cnt[80];
+ 			snprintf(cnt, sizeof(cnt),
+ 				 " mismatches found: %d (on raid level %d)",
+-				sra->mismatch_cnt, array.level);
++				sra->mismatch_cnt, sra->array.level);
+ 			alert("RebuildFinished", dev, cnt, ainfo);
+ 		} else
+ 			alert("RebuildFinished", dev, NULL, ainfo);
+-- 
+2.7.4
+

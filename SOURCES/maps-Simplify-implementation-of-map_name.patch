@@ -1,0 +1,32 @@
+From 4a4379b054a72b3c4abd93dd6e1283d6aa992ee2 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Fri, 21 Apr 2017 12:11:21 -0400
+Subject: [RHEL7.5 PATCH 093/169] maps: Simplify implementation of
+ map_name()
+
+Reported-By: NeilBrown <neilb@suse.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ maps.c | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/maps.c b/maps.c
+index 81f29c4..bb28ba6 100644
+--- a/maps.c
++++ b/maps.c
+@@ -165,11 +165,8 @@ char *map_num(mapping_t *map, int num)
+ 
+ int map_name(mapping_t *map, char *name)
+ {
+-	while (map->name) {
+-		if (strcmp(map->name, name)==0)
+-			return map->num;
++	while (map->name && strcmp(map->name, name) != 0)
+ 		map++;
+-	}
+ 
+ 	return map->num;
+ }
+-- 
+2.7.4
+

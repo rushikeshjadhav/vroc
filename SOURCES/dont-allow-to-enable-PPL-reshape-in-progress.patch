@@ -1,0 +1,42 @@
+commit 922a58292fafa4efcfcd44fbc46b0665681c955a
+Author: Tomasz Majchrzak <tomasz.majchrzak@intel.com>
+Date:   Fri Jun 9 16:20:19 2017 +0200
+
+    Grow: don't allow to enable PPL when reshape is in progress
+    
+    Don't allow to enable PPL consistency policy when reshape is in progress.
+    Current PPL implementation doesn't work when reshape is taking place.
+    
+    Signed-off-by: Tomasz Majchrzak <tomasz.majchrzak@intel.com>
+    Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+
+diff --git a/Grow.c b/Grow.c
+index f7325cb..b1cb306 100644
+--- a/Grow.c
++++ b/Grow.c
+@@ -530,6 +530,7 @@ int Grow_consistency_policy(char *devname, int fd, struct context *c, struct sha
+ 	char *subarray = NULL;
+ 	int ret = 0;
+ 	char container_dev[PATH_MAX];
++	char buf[20];
+ 
+ 	if (s->consistency_policy != CONSISTENCY_POLICY_RESYNC &&
+ 	    s->consistency_policy != CONSISTENCY_POLICY_PPL) {
+@@ -577,6 +578,17 @@ int Grow_consistency_policy(char *devname, int fd, struct context *c, struct sha
+ 		goto free_info;
+ 	}
+ 
++	if (s->consistency_policy == CONSISTENCY_POLICY_PPL) {
++		if (sysfs_get_str(sra, NULL, "sync_action", buf, 20) <= 0) {
++			ret = 1;
++			goto free_info;
++		} else if (strcmp(buf, "reshape\n") == 0) {
++			pr_err("PPL cannot be enabled when reshape is in progress\n");
++			ret = 1;
++			goto free_info;
++		}
++	}
++
+ 	if (subarray) {
+ 		char *update;
+ 

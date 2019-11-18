@@ -1,0 +1,61 @@
+From 5e13ef714df4734c455b5e4389352c8ab7902038 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Wed, 12 Apr 2017 14:48:10 -0400
+Subject: [RHEL7.5 PATCH 076/169] Detail: Remove pre-2.6 code for printing
+ info on rebuilding
+
+Since we no longer support anything pre-2.6.15, there is no point in
+keeping this around.
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Detail.c | 19 +++----------------
+ 1 file changed, 3 insertions(+), 16 deletions(-)
+
+diff --git a/Detail.c b/Detail.c
+index d4e6204..8f74832 100644
+--- a/Detail.c
++++ b/Detail.c
+@@ -64,8 +64,6 @@ int Detail(char *dev, struct context *c)
+ 	int max_devices = 0, n_devices = 0;
+ 	int spares = 0;
+ 	struct stat stb;
+-	int is_26 = get_linux_version() >= 2006000;
+-	int is_rebuilding = 0;
+ 	int failed = 0;
+ 	struct supertype *st;
+ 	char *subarray = NULL;
+@@ -527,7 +525,6 @@ int Detail(char *dev, struct context *c)
+ 				"Reshape", "Check"};
+ 			printf("    %7s Status : %d%% complete\n",
+ 			       sync_action[e->resync], e->percent);
+-			is_rebuilding = 1;
+ 		}
+ 		free_mdstat(ms);
+ 
+@@ -676,19 +673,9 @@ This is pretty boring
+ 			      |(1<<MD_DISK_REMOVED)|(1<<MD_DISK_FAULTY)|(1<<MD_DISK_JOURNAL)))
+ 			    == 0) {
+ 				printf(" spare");
+-				if (is_26) {
+-					if (disk.raid_disk < array.raid_disks && disk.raid_disk >= 0)
+-						printf(" rebuilding");
+-				} else if (is_rebuilding && failed) {
+-					/* Taking a bit of a risk here, we remove the
+-					 * device from the array, and then put it back.
+-					 * If this fails, we are rebuilding
+-					 */
+-					int err = ioctl(fd, HOT_REMOVE_DISK, makedev(disk.major, disk.minor));
+-					if (err == 0) ioctl(fd, HOT_ADD_DISK, makedev(disk.major, disk.minor));
+-					if (err && errno ==  EBUSY)
+-						printf(" rebuilding");
+-				}
++				if (disk.raid_disk < array.raid_disks &&
++				    disk.raid_disk >= 0)
++					printf(" rebuilding");
+ 			}
+ 		}
+ 		if (disk.state == 0) spares++;
+-- 
+2.7.4
+

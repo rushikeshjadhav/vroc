@@ -1,0 +1,52 @@
+From d3c40faba807e3c7a63c5fe34de52bf753c88b2d Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Fri, 29 Sep 2017 17:54:12 -0400
+Subject: [RHEL7.5 PATCH 10/13] lib: devid2kname() should take a dev_t
+
+Make devid2kname() and devid2devnm() consistent in their APIs
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ lib.c   | 5 ++---
+ mdadm.h | 2 +-
+ 2 files changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/lib.c b/lib.c
+index be093e8..60890b9 100644
+--- a/lib.c
++++ b/lib.c
+@@ -61,7 +61,7 @@ int get_mdp_major(void)
+ 	return mdp_major;
+ }
+ 
+-char *devid2kname(int devid)
++char *devid2kname(dev_t devid)
+ {
+ 	char path[30];
+ 	char link[PATH_MAX];
+@@ -73,8 +73,7 @@ char *devid2kname(int devid)
+ 	 * /sys/dev/block/%d:%d link which must look like
+ 	 * and take the last component.
+ 	 */
+-	sprintf(path, "/sys/dev/block/%d:%d", major(devid),
+-		minor(devid));
++	sprintf(path, "/sys/dev/block/%d:%d", major(devid), minor(devid));
+ 	n = readlink(path, link, sizeof(link) - 1);
+ 	if (n > 0) {
+ 		link[n] = 0;
+diff --git a/mdadm.h b/mdadm.h
+index 191ae8f..db08188 100644
+--- a/mdadm.h
++++ b/mdadm.h
+@@ -1537,7 +1537,7 @@ extern void print_r10_layout(int layout);
+ extern char *find_free_devnm(int use_partitions);
+ 
+ extern void put_md_name(char *name);
+-extern char *devid2kname(int devid);
++extern char *devid2kname(dev_t devid);
+ extern char *devid2devnm(dev_t devid);
+ extern dev_t devnm2devid(char *devnm);
+ extern char *get_md_name(char *devnm);
+-- 
+2.7.4
+

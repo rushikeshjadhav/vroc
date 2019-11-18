@@ -1,0 +1,39 @@
+commit 84918897ee8bb450ea09f7c95b9da44df8e925e4
+Author: Maksymilian Kunt <maksymilian.kunt@intel.com>
+Date:   Tue May 9 14:03:27 2017 +0200
+
+    IMSM: Correct --examine output for 4k disks
+    
+    "Array Size" and "Per Dev Size" are incorrect for disks with sector size
+    different than 512B.
+    
+    Calculate "Array Size" and "Per Dev Size" based on sector size. Additionally
+    print "Sector Size".
+    
+    Signed-off-by: Maksymilian Kunt <maksymilian.kunt@intel.com>
+    Signed-off-by: Mariusz Dabrowski <mariusz.dabrowski@intel.com>
+    Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+
+diff --git a/super-intel.c b/super-intel.c
+index ba6f810..8ca80d3 100644
+--- a/super-intel.c
++++ b/super-intel.c
+@@ -1482,13 +1482,16 @@ static void print_imsm_dev(struct intel_super *super,
+ 		       ord & IMSM_ORD_REBUILD ? " (out-of-sync)" : "");
+ 	} else
+ 		printf("      This Slot : ?\n");
++	printf("    Sector Size : %u\n", super->sector_size);
+ 	sz = __le32_to_cpu(dev->size_high);
+ 	sz <<= 32;
+ 	sz += __le32_to_cpu(dev->size_low);
+-	printf("     Array Size : %llu%s\n", (unsigned long long)sz,
++	printf("     Array Size : %llu%s\n",
++		   (unsigned long long)sz * 512 / super->sector_size,
+ 	       human_size(sz * 512));
+ 	sz = blocks_per_member(map);
+-	printf("   Per Dev Size : %llu%s\n", (unsigned long long)sz,
++	printf("   Per Dev Size : %llu%s\n",
++		   (unsigned long long)sz * 512 / super->sector_size,
+ 	       human_size(sz * 512));
+ 	printf("  Sector Offset : %llu\n",
+ 		pba_of_lba0(map));

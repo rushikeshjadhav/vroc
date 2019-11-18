@@ -1,0 +1,41 @@
+From 9e4524df1c6c85c362278a08fd4425888d27581f Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Tue, 2 May 2017 11:46:49 -0400
+Subject: [RHEL7.5 PATCH 104/169] Grow: Grow_continue_command: Avoid
+ aliasing array variable
+
+While this would cause a warning since the two are different types,
+lets avoid aliasing an existing variable.
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Grow.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/Grow.c b/Grow.c
+index c6967ed..f4bd301 100755
+--- a/Grow.c
++++ b/Grow.c
+@@ -5075,7 +5075,7 @@ int Grow_continue_command(char *devname, int fd,
+ 
+ 		cc = st->ss->container_content(st, subarray);
+ 		for (content = cc; content ; content = content->next) {
+-			char *array;
++			char *array_name;
+ 			int allow_reshape = 1;
+ 
+ 			if (content->reshape_active == 0)
+@@ -5100,8 +5100,8 @@ int Grow_continue_command(char *devname, int fd,
+ 				goto Grow_continue_command_exit;
+ 			}
+ 
+-			array = strchr(content->text_version+1, '/')+1;
+-			mdstat = mdstat_by_subdev(array, container);
++			array_name = strchr(content->text_version+1, '/')+1;
++			mdstat = mdstat_by_subdev(array_name, container);
+ 			if (!mdstat)
+ 				continue;
+ 			if (mdstat->active == 0) {
+-- 
+2.7.4
+

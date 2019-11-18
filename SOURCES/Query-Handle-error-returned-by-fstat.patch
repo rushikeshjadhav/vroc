@@ -1,0 +1,72 @@
+From 8d0cd09d73a9a9d57ee73b7a79114e881dad1507 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Thu, 13 Apr 2017 11:53:21 -0400
+Subject: [RHEL7.5 PATCH 079/169] Query: Handle error returned by fstat()
+
+We shouldn't ignore any error returned by fstat() even if open() didn't
+fail.
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Query.c | 19 ++++++++++++-------
+ 1 file changed, 12 insertions(+), 7 deletions(-)
+
+diff --git a/Query.c b/Query.c
+index bea273f..0d18da4 100644
+--- a/Query.c
++++ b/Query.c
+@@ -32,22 +32,21 @@ int Query(char *dev)
+ 	 * whether it is an md device and whether it has
+ 	 * a superblock
+ 	 */
+-	int fd = open(dev, O_RDONLY);
+-	int ioctlerr;
++	int fd;
++	int ioctlerr, staterr;
+ 	int superror;
+ 	struct mdinfo info;
+ 	mdu_array_info_t array;
+ 	struct supertype *st = NULL;
+-
+ 	unsigned long long larray_size;
+ 	struct stat stb;
+ 	char *mddev;
+ 	mdu_disk_info_t disc;
+ 	char *activity;
+ 
++	fd = open(dev, O_RDONLY);
+ 	if (fd < 0){
+-		pr_err("cannot open %s: %s\n",
+-			dev, strerror(errno));
++		pr_err("cannot open %s: %s\n", dev, strerror(errno));
+ 		return 1;
+ 	}
+ 
+@@ -56,9 +55,12 @@ int Query(char *dev)
+ 	else
+ 		ioctlerr = 0;
+ 
+-	fstat(fd, &stb);
++	if (fstat(fd, &stb) < 0)
++		staterr = errno;
++	else
++		staterr = 0;
+ 
+-	if (!ioctlerr) {
++	if (!ioctlerr && !staterr) {
+ 		if (!get_dev_size(fd, NULL, &larray_size))
+ 			larray_size = 0;
+ 	}
+@@ -68,6 +70,9 @@ int Query(char *dev)
+ 	else if (ioctlerr)
+ 		printf("%s: is an md device, but gives \"%s\" when queried\n",
+ 		       dev, strerror(ioctlerr));
++	else if (staterr)
++		printf("%s: is not a valid md device, returning %s\n",
++		       dev, strerror(ioctlerr));
+ 	else {
+ 		printf("%s: %s %s %d devices, %d spare%s. Use mdadm --detail for more detail.\n",
+ 		       dev,
+-- 
+2.7.4
+

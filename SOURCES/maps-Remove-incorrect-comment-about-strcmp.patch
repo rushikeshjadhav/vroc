@@ -1,0 +1,29 @@
+From 966188e959ec198889bec6d2f9dac34bff97478f Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Fri, 21 Apr 2017 12:09:12 -0400
+Subject: [RHEL7.5 PATCH 092/169] maps: Remove incorrect comment about
+ strcmp()
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ maps.c | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/maps.c b/maps.c
+index 11dd3d2..81f29c4 100644
+--- a/maps.c
++++ b/maps.c
+@@ -141,10 +141,6 @@ mapping_t consistency_policies[] = {
+ };
+ 
+ mapping_t sysfs_array_states[] = {
+-	/*
+-	 * Beware map_name() uses strcmp() so active-idle must come before
+-	 * active, to be detected correctly.
+-	 */
+ 	{ "active-idle", ARRAY_ACTIVE_IDLE },
+ 	{ "active", ARRAY_ACTIVE },
+ 	{ "clear", ARRAY_CLEAR },
+-- 
+2.7.4
+

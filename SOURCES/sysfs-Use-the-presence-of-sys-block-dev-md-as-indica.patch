@@ -1,0 +1,51 @@
+From 67a02d520085b01a1b9e6ea59fb30e79c5649c9c Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Thu, 30 Mar 2017 16:02:36 -0400
+Subject: [RHEL7.5 PATCH 047/169] sysfs: Use the presence of
+ /sys/block/<dev>/md as indicator of valid device
+
+Rather than calling ioctl(RAID_VERSION), use the presence of
+/sys/block/<dev>/md as indicator of the device being valid and sysfs
+being active for it. The ioctl could return valid data, but sysfs
+not mounted, which renders sysfs_init() useless anyway.
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ sysfs.c | 17 ++++++++++++-----
+ 1 file changed, 12 insertions(+), 5 deletions(-)
+
+diff --git a/sysfs.c b/sysfs.c
+index 2a91ba0..93ec3de 100644
+--- a/sysfs.c
++++ b/sysfs.c
+@@ -86,15 +86,22 @@ void sysfs_init_dev(struct mdinfo *mdi, unsigned long devid)
+ 
+ void sysfs_init(struct mdinfo *mdi, int fd, char *devnm)
+ {
++	struct stat stb;
++	char fname[MAX_SYSFS_PATH_LEN];
++
+ 	mdi->sys_name[0] = 0;
+-	if (fd >= 0) {
+-		mdu_version_t vers;
+-		if (ioctl(fd, RAID_VERSION, &vers) != 0)
+-			return;
++	if (fd >= 0)
+ 		devnm = fd2devnm(fd);
+-	}
++
+ 	if (devnm == NULL)
+ 		return;
++
++	snprintf(fname, MAX_SYSFS_PATH_LEN, "/sys/block/%s/md", devnm);
++
++	if (stat(fname, &stb))
++		return;
++	if (!S_ISDIR(stb.st_mode))
++		return;
+ 	strcpy(mdi->sys_name, devnm);
+ }
+ 
+-- 
+2.7.4
+

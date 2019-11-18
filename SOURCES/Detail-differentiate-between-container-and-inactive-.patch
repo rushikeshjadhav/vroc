@@ -1,0 +1,89 @@
+From bb8354598676428af01f23bfb1876c7356d61147 Mon Sep 17 00:00:00 2001
+From: Mariusz Tkaczyk <mariusz.tkaczyk@intel.com>
+Date: Fri, 18 Aug 2017 12:00:23 +0200
+Subject: [RHEL7.5 PATCH 01/13] Detail: differentiate between container and
+ inactive arrays
+
+Containers used to be handled as active arrays because GET_ARRAY_INFO
+ioctl returns valid structure for them. As containers appear as inactive
+in sysfs, the output for detail command has changed.
+
+Stop relying on inactive state for containers. Make the output look the
+same as in mdadm 4.0.
+
+Signed-off-by: Mariusz Tkaczyk <mariusz.tkaczyk@intel.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Detail.c | 16 +++++++++++-----
+ 1 file changed, 11 insertions(+), 5 deletions(-)
+
+diff --git a/Detail.c b/Detail.c
+index 2c9fb24..4dcf81d 100644
+--- a/Detail.c
++++ b/Detail.c
+@@ -80,6 +80,7 @@ int Detail(char *dev, struct context *c)
+ 	char *avail = NULL;
+ 	int external;
+ 	int inactive;
++	int is_container = 0;
+ 
+ 	if (fd < 0) {
+ 		pr_err("cannot open %s: %s\n",
+@@ -119,6 +120,8 @@ int Detail(char *dev, struct context *c)
+ 		}
+ 	}
+ 
++	if (array.raid_disks == 0 && external)
++		is_container = 1;
+ 	if (fstat(fd, &stb) != 0 && !S_ISBLK(stb.st_mode))
+ 		stb.st_rdev = 0;
+ 	rv = 0;
+@@ -228,7 +231,7 @@ int Detail(char *dev, struct context *c)
+ 				printf("MD_LEVEL=%s\n", str);
+ 			printf("MD_DEVICES=%d\n", array.raid_disks);
+ 		} else {
+-			if (!inactive)
++			if (is_container)
+ 				printf("MD_LEVEL=container\n");
+ 			printf("MD_DEVICES=%d\n", array.nr_disks);
+ 		}
+@@ -357,13 +360,16 @@ int Detail(char *dev, struct context *c)
+ 
+ 	if (c->brief) {
+ 		mdu_bitmap_file_t bmf;
+-		printf("%sARRAY %s", inactive ? "INACTIVE-":"", dev);
++		if (inactive && !is_container)
++			printf("INACTIVE-ARRAY %s", dev);
++		else
++			printf("ARRAY %s", dev);
+ 		if (c->verbose > 0) {
+ 			if (array.raid_disks)
+ 				printf(" level=%s num-devices=%d",
+ 				       str ? str : "-unknown-",
+ 				       array.raid_disks);
+-			else if (!inactive)
++			else if (is_container)
+ 				printf(" level=container num-devices=%d",
+ 				       array.nr_disks);
+ 			else
+@@ -416,7 +422,7 @@ int Detail(char *dev, struct context *c)
+ 		atime = array.ctime;
+ 		if (atime)
+ 			printf("     Creation Time : %.24s\n", ctime(&atime));
+-		if (array.raid_disks == 0 && external)
++		if (is_container)
+ 			str = "container";
+ 		if (str)
+ 			printf("        Raid Level : %s\n", str);
+@@ -489,7 +495,7 @@ int Detail(char *dev, struct context *c)
+ 			       " (DELAYED)": "",
+ 			       (e && e->percent == RESYNC_PENDING) ?
+ 			       " (PENDING)": "");
+-		} else if (inactive) {
++		} else if (inactive && !is_container) {
+ 			printf("             State : inactive\n");
+ 		}
+ 		if (array.raid_disks)
+-- 
+2.7.4
+

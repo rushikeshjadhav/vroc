@@ -1,0 +1,34 @@
+From 1b4944f3a1e135871437cc33c26539028e6da5d6 Mon Sep 17 00:00:00 2001
+From: Zhilong Liu <zlliu@suse.com>
+Date: Tue, 28 Mar 2017 21:52:27 +0800
+Subject: [RHEL7.5 PATCH 021/169] mdadm/Build:check the level parameter
+ when build new array
+
+check if user forgets to specify the --level
+when build a new array. such as:
+./mdadm -B /dev/md0 -n2 /dev/loop[0-1]
+
+Signed-off-by: Zhilong Liu <zlliu@suse.com>
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ Build.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/Build.c b/Build.c
+index 74a440e..a5fcc06 100644
+--- a/Build.c
++++ b/Build.c
+@@ -56,6 +56,10 @@ int Build(char *mddev, struct mddev_dev *devlist,
+ 	int uuid[4] = {0,0,0,0};
+ 	struct map_ent *map = NULL;
+ 
++	if (s->level == UnSet) {
++		pr_err("a RAID level is needed to Build an array.\n");
++		return 1;
++	}
+ 	/* scan all devices, make sure they really are block devices */
+ 	for (dv = devlist; dv; dv=dv->next) {
+ 		subdevs++;
+-- 
+2.7.4
+

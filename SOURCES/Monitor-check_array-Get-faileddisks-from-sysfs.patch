@@ -1,0 +1,46 @@
+From b8e5713c74901862b96bf599ab6fd227addc1498 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Tue, 9 May 2017 16:54:19 -0400
+Subject: [RHEL7.5 PATCH 130/169] Monitor/check_array: Get 'failed_disks'
+ from sysfs
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Monitor.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/Monitor.c b/Monitor.c
+index b94fd7c..9456efd 100644
+--- a/Monitor.c
++++ b/Monitor.c
+@@ -481,7 +481,8 @@ static int check_array(struct state *st, struct mdstat_ent *mdstat,
+ 	if (st->devnm[0] == 0)
+ 		strcpy(st->devnm, fd2devnm(fd));
+ 
+-	sra = sysfs_read(-1, st->devnm, GET_LEVEL | GET_MISMATCH);
++	sra = sysfs_read(-1, st->devnm, GET_LEVEL | GET_DEGRADED |
++			 GET_MISMATCH);
+ 	if (!sra)
+ 		goto disappeared;
+ 
+@@ -522,7 +523,7 @@ static int check_array(struct state *st, struct mdstat_ent *mdstat,
+ 		alert("NewArray", st->devname, NULL, ainfo);
+ 	}
+ 
+-	if (st->utime == array.utime && st->failed == array.failed_disks &&
++	if (st->utime == array.utime && st->failed == sra->array.failed_disks &&
+ 	    st->working == array.working_disks &&
+ 	    st->spare == array.spare_disks &&
+ 	    (mse == NULL  || (mse->percent == st->percent))) {
+@@ -638,7 +639,7 @@ static int check_array(struct state *st, struct mdstat_ent *mdstat,
+ 	st->active = array.active_disks;
+ 	st->working = array.working_disks;
+ 	st->spare = array.spare_disks;
+-	st->failed = array.failed_disks;
++	st->failed = sra->array.failed_disks;
+ 	st->utime = array.utime;
+ 	st->raid = array.raid_disks;
+ 	st->err = 0;
+-- 
+2.7.4
+

@@ -1,0 +1,35 @@
+commit e1b942b9afa9f3310ea19c57caea896af97b557e
+Author: Tomasz Majchrzak <tomasz.majchrzak@intel.com>
+Date:   Thu Sep 7 13:01:16 2017 +0200
+
+    Grow: stop previous reshape process first
+    
+    If array is stopped during reshape and assembled again straight away,
+    reshape process in a background might still be running. systemd doesn't
+    start a new service if one already exists. If there is a race, previous
+    process might terminate and new one is not created. Reshape doesn't
+    continue after assemble.
+    
+    Tell systemd to restart the service rather than just start it. It will
+    assure previous service is stopped first. If it's not running, stopping
+    has no effect and only new process is started.
+    
+    Signed-off-by: Tomasz Majchrzak <tomasz.majchrzak@intel.com>
+    Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+
+diff --git a/Grow.c b/Grow.c
+index 534ba80..267b06f 100644
+--- a/Grow.c
++++ b/Grow.c
+@@ -3003,9 +3003,9 @@ static int continue_via_systemd(char *devnm)
+ 		snprintf(pathbuf, sizeof(pathbuf), "mdadm-grow-continue@%s.service",
+ 			 devnm);
+ 		status = execl("/usr/bin/systemctl", "systemctl",
+-			       "start",
++			       "restart",
+ 			       pathbuf, NULL);
+-		status = execl("/bin/systemctl", "systemctl", "start",
++		status = execl("/bin/systemctl", "systemctl", "restart",
+ 			       pathbuf, NULL);
+ 		exit(1);
+ 	case -1: /* Just do it ourselves. */

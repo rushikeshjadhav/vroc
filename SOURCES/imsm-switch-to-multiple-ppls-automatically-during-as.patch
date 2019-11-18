@@ -1,0 +1,60 @@
+From 54148aba7c1a02bf018ae777bebc7f16e6cd3195 Mon Sep 17 00:00:00 2001
+From: Pawel Baldysiak <pawel.baldysiak@intel.com>
+Date: Thu, 28 Sep 2017 14:41:12 +0200
+Subject: [PATCH 06/12] imsm: switch to multiple ppls automatically
+ during assemble
+
+If user has array with single ppl -
+update the metadata to use multiple ppls.
+
+Signed-off-by: Pawel Baldysiak <pawel.baldysiak@intel.com>
+Signed-off-by: Artur Paszkiewicz <artur.paszkiewicz@intel.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ super-intel.c | 30 ++++++++++++++++++++++++++++++
+ 1 file changed, 30 insertions(+)
+
+diff --git a/super-intel.c b/super-intel.c
+index 65cdc92..630fb6e 100644
+--- a/super-intel.c
++++ b/super-intel.c
+@@ -6184,6 +6184,36 @@ static int validate_ppl_imsm(struct supertype *st, struct mdinfo *info,
+ out:
+ 	free(buf);
+ 
++	/*
++	 * Update metadata to use mutliple PPLs area (1MB).
++	 * This is done once for all RAID members
++	 */
++	if (info->consistency_policy == CONSISTENCY_POLICY_PPL &&
++	    info->ppl_size != (MULTIPLE_PPL_AREA_SIZE_IMSM >> 9)) {
++		char subarray[20];
++		struct mdinfo *member_dev;
++
++		sprintf(subarray, "%d", info->container_member);
++
++		if (mdmon_running(st->container_devnm))
++			st->update_tail = &st->updates;
++
++		if (st->ss->update_subarray(st, subarray, "ppl", NULL)) {
++			pr_err("Failed to update subarray %s\n",
++			      subarray);
++		} else {
++			if (st->update_tail)
++				flush_metadata_updates(st);
++			else
++				st->ss->sync_metadata(st);
++			info->ppl_size = (MULTIPLE_PPL_AREA_SIZE_IMSM >> 9);
++			for (member_dev = info->devs; member_dev;
++			     member_dev = member_dev->next)
++				member_dev->ppl_size =
++				    (MULTIPLE_PPL_AREA_SIZE_IMSM >> 9);
++		}
++	}
++
+ 	if (ret == 1 && map->map_state == IMSM_T_STATE_UNINITIALIZED)
+ 		return st->ss->write_init_ppl(st, info, d->fd);
+ 
+-- 
+2.7.4
+

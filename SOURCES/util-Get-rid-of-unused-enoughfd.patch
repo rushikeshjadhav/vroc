@@ -1,0 +1,70 @@
+From 44356754ec8d7c38720db6c9916fef8f24921831 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Thu, 20 Apr 2017 11:53:30 -0400
+Subject: [RHEL7.5 PATCH 085/169] util: Get rid of unused enough_fd()
+
+enough_fd() is no longer used, so lets get rid of it.
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ mdadm.h |  1 -
+ util.c  | 31 -------------------------------
+ 2 files changed, 32 deletions(-)
+
+diff --git a/mdadm.h b/mdadm.h
+index f6e97fd..1bbacfe 100644
+--- a/mdadm.h
++++ b/mdadm.h
+@@ -1485,7 +1485,6 @@ extern char *fname_from_uuid(struct supertype *st,
+ extern unsigned long calc_csum(void *super, int bytes);
+ extern int enough(int level, int raid_disks, int layout, int clean,
+ 		   char *avail);
+-extern int enough_fd(int fd);
+ extern int ask(char *mesg);
+ extern unsigned long long get_component_size(int fd);
+ extern void remove_partitions(int fd);
+diff --git a/util.c b/util.c
+index 3adc675..21a63c9 100644
+--- a/util.c
++++ b/util.c
+@@ -542,37 +542,6 @@ int enough(int level, int raid_disks, int layout, int clean, char *avail)
+ 	}
+ }
+ 
+-int enough_fd(int fd)
+-{
+-	struct mdu_array_info_s array;
+-	struct mdu_disk_info_s disk;
+-	int i, rv;
+-	char *avail;
+-
+-	if (md_get_array_info(fd, &array) != 0 || array.raid_disks <= 0)
+-		return 0;
+-	avail = xcalloc(array.raid_disks, 1);
+-	for (i = 0; i < MAX_DISKS && array.nr_disks > 0; i++) {
+-		disk.number = i;
+-		if (md_get_disk_info(fd, &disk) != 0)
+-			continue;
+-		if (disk.major == 0 && disk.minor == 0)
+-			continue;
+-		array.nr_disks--;
+-
+-		if (! (disk.state & (1<<MD_DISK_SYNC)))
+-			continue;
+-		if (disk.raid_disk < 0 || disk.raid_disk >= array.raid_disks)
+-			continue;
+-		avail[disk.raid_disk] = 1;
+-	}
+-	/* This is used on an active array, so assume it is clean */
+-	rv = enough(array.level, array.raid_disks, array.layout,
+-		    1, avail);
+-	free(avail);
+-	return rv;
+-}
+-
+ const int uuid_zero[4] = { 0, 0, 0, 0 };
+ 
+ int same_uuid(int a[4], int b[4], int swapuuid)
+-- 
+2.7.4
+

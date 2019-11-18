@@ -1,0 +1,38 @@
+From e5eb6857cde0a6a44684dcc7ea0fb196546cf56c Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Tue, 9 May 2017 17:15:14 -0400
+Subject: [RHEL7.5 PATCH 134/169] Monitor/check_array: Use working_disks
+ from sysfs
+
+sysfs now provides working_disks information, so lets use it too.
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Monitor.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Monitor.c b/Monitor.c
+index 2204528..5b95847 100644
+--- a/Monitor.c
++++ b/Monitor.c
+@@ -524,7 +524,7 @@ static int check_array(struct state *st, struct mdstat_ent *mdstat,
+ 	}
+ 
+ 	if (st->utime == array.utime && st->failed == sra->array.failed_disks &&
+-	    st->working == array.working_disks &&
++	    st->working == sra->array.working_disks &&
+ 	    st->spare == sra->array.spare_disks &&
+ 	    (mse == NULL  || (mse->percent == st->percent))) {
+ 		if ((st->active < st->raid) && st->spare == 0)
+@@ -637,7 +637,7 @@ static int check_array(struct state *st, struct mdstat_ent *mdstat,
+ 		st->devid[i] = makedev(disc.major, disc.minor);
+ 	}
+ 	st->active = sra->array.active_disks;
+-	st->working = array.working_disks;
++	st->working = sra->array.working_disks;
+ 	st->spare = sra->array.spare_disks;
+ 	st->failed = sra->array.failed_disks;
+ 	st->utime = array.utime;
+-- 
+2.7.4
+

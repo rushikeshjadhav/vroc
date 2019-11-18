@@ -1,0 +1,32 @@
+From 15d924d363a2bc02aa4a489241333be3d7820978 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Wed, 5 Apr 2017 15:39:51 -0400
+Subject: [RHEL7.5 PATCH 062/169] mdmon: Stop bothering about
+ md_get_version()
+
+If anyone has a kernel with md driver older than 0.90.03 they will
+also know where to find older versions of mdadm.
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ mdmon.c | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/mdmon.c b/mdmon.c
+index 95e9bba..0955fcc 100644
+--- a/mdmon.c
++++ b/mdmon.c
+@@ -408,10 +408,6 @@ static int mdmon(char *devnm, int must_fork, int takeover)
+ 		pr_err("%s: %s\n", devnm, strerror(errno));
+ 		return 1;
+ 	}
+-	if (md_get_version(mdfd) < 0) {
+-		pr_err("%s: Not an md device\n", devnm);
+-		return 1;
+-	}
+ 
+ 	/* Fork, and have the child tell us when they are ready */
+ 	if (must_fork) {
+-- 
+2.7.4
+

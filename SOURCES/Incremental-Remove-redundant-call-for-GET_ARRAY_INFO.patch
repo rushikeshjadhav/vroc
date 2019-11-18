@@ -1,0 +1,54 @@
+From 5b13d2e1fb8abecddd4e28e67facac5d7ef2cef3 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Wed, 29 Mar 2017 14:40:36 -0400
+Subject: [RHEL7.5 PATCH 038/169] Incremental: Remove redundant call for
+ GET_ARRAY_INFO
+
+The code above just called md_get_array_info() and only reached this
+point if it returned an error that isn't ENODEV, so it's pointless to
+check this again here.
+
+In addition it was incorrectly retrieving ioctl data into a
+mdu_bitmap_file_t instead of mdu_array_info_t.
+
+Fixes: ("8382f19 Add new mode: --incremental")
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ Incremental.c | 14 ++++++--------
+ 1 file changed, 6 insertions(+), 8 deletions(-)
+
+diff --git a/Incremental.c b/Incremental.c
+index 1f12c77..802e525 100644
+--- a/Incremental.c
++++ b/Incremental.c
+@@ -1345,7 +1345,6 @@ int IncrementalScan(struct context *c, char *devnm)
+ restart:
+ 	for (me = mapl ; me ; me = me->next) {
+ 		mdu_array_info_t array;
+-		mdu_bitmap_file_t bmf;
+ 		struct mdinfo *sra;
+ 		int mdfd;
+ 
+@@ -1405,13 +1404,12 @@ restart:
+ 			 * is a hint only
+ 			 */
+ 			int added = -1;
+-			if (ioctl(mdfd, GET_ARRAY_INFO, &bmf) < 0) {
+-				int bmfd = open(mddev->bitmap_file, O_RDWR);
+-				if (bmfd >= 0) {
+-					added = ioctl(mdfd, SET_BITMAP_FILE,
+-						      bmfd);
+-					close(bmfd);
+-				}
++			int bmfd;
++
++			bmfd = open(mddev->bitmap_file, O_RDWR);
++			if (bmfd >= 0) {
++				added = ioctl(mdfd, SET_BITMAP_FILE, bmfd);
++				close(bmfd);
+ 			}
+ 			if (c->verbose >= 0) {
+ 				if (added == 0)
+-- 
+2.7.4
+

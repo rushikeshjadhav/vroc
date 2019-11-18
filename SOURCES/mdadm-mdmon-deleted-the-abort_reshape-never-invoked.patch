@@ -1,0 +1,34 @@
+From e81070a69bf0c6e20f95806b6c60f6ec5c952a20 Mon Sep 17 00:00:00 2001
+From: Zhilong Liu <zlliu@suse.com>
+Date: Mon, 20 Mar 2017 13:21:24 +0800
+Subject: [RHEL7.5 PATCH 013/169] mdadm/mdmon:deleted the abort_reshape
+ never invoked
+
+mdmon.c: abort_reshape() has implemented in Grow.c,
+this function doesn't make a lot of sense here.
+
+Signed-off-by: Zhilong Liu <zlliu@suse.com>
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ mdmon.c | 5 -----
+ 1 file changed, 5 deletions(-)
+
+diff --git a/mdmon.c b/mdmon.c
+index e4b73d9..95e9bba 100644
+--- a/mdmon.c
++++ b/mdmon.c
+@@ -580,11 +580,6 @@ int restore_stripes(int *dest, unsigned long long *offsets,
+ 	return 1;
+ }
+ 
+-void abort_reshape(struct mdinfo *sra)
+-{
+-	return;
+-}
+-
+ int save_stripes(int *source, unsigned long long *offsets,
+ 		 int raid_disks, int chunk_size, int level, int layout,
+ 		 int nwrites, int *dest,
+-- 
+2.7.4
+

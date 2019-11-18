@@ -1,0 +1,172 @@
+commit 4b57ecf6cea134edff75a2f3a87ee48d52715c70
+Author: Alexey Obitotskiy <aleksey.obitotskiy@intel.com>
+Date:   Tue May 9 12:25:47 2017 +0200
+
+    Add sector size as spare selection criterion
+    
+    Add sector size as new spare selection criterion. Assume that 0 means
+    there is no requirement for the sector size in the array. Skip disks
+    with unsuitable sector size when looking for a spare to move across
+    containers.
+    
+    Signed-off-by: Alexey Obitotskiy <aleksey.obitotskiy@intel.com>
+    Signed-off-by: Tomasz Majchrzak <tomasz.majchrzak@intel.com>
+    Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+
+diff --git a/Incremental.c b/Incremental.c
+index fe9d644..30dc7a2 100644
+--- a/Incremental.c
++++ b/Incremental.c
+@@ -867,7 +867,7 @@ static int array_try_spare(char *devname, int *dfdp, struct dev_policy *pol,
+ 		struct domainlist *dl = NULL;
+ 		struct mdinfo *sra;
+ 		unsigned long long devsize;
+-		struct spare_criteria sc = {0};
++		struct spare_criteria sc = {0, 0};
+ 
+ 		if (is_subarray(mp->metadata))
+ 			continue;
+@@ -1627,7 +1627,7 @@ static int Incremental_container(struct supertype *st, char *devname,
+ 		struct mdinfo *sinfo;
+ 
+ 		if (!sst->ss->load_container(sst, sfd, NULL)) {
+-			struct spare_criteria sc = {0};
++			struct spare_criteria sc = {0, 0};
+ 
+ 			if (st->ss->get_spare_criteria)
+ 				st->ss->get_spare_criteria(st, &sc);
+diff --git a/Monitor.c b/Monitor.c
+index 9a2baad..c96f8e8 100644
+--- a/Monitor.c
++++ b/Monitor.c
+@@ -731,6 +731,7 @@ static int get_required_spare_criteria(struct state *st,
+ 	if (!st->metadata ||
+ 	    !st->metadata->ss->get_spare_criteria) {
+ 		sc->min_size = 0;
++		sc->sector_size = 0;
+ 		return 0;
+ 	}
+ 
+@@ -787,6 +788,7 @@ static dev_t choose_spare(struct state *from, struct state *to,
+ 		    from->devstate[d] == 0) {
+ 			struct dev_policy *pol;
+ 			unsigned long long dev_size;
++			unsigned int dev_sector_size;
+ 
+ 			if (to->metadata->ss->external &&
+ 			    test_partition_from_id(from->devid[d]))
+@@ -797,6 +799,12 @@ static dev_t choose_spare(struct state *from, struct state *to,
+ 			    dev_size < sc->min_size)
+ 				continue;
+ 
++			if (sc->sector_size &&
++			    dev_sector_size_from_id(from->devid[d],
++						    &dev_sector_size) &&
++			    sc->sector_size != dev_sector_size)
++				continue;
++
+ 			pol = devid_policy(from->devid[d]);
+ 			if (from->spare_group)
+ 				pol_add(&pol, pol_domain,
+diff --git a/mdadm.h b/mdadm.h
+index 8da7fd3..ec0a39e 100644
+--- a/mdadm.h
++++ b/mdadm.h
+@@ -363,6 +363,7 @@ struct createinfo {
+ 
+ struct spare_criteria {
+ 	unsigned long long min_size;
++	unsigned int sector_size;
+ };
+ 
+ enum mode {
+@@ -947,6 +948,7 @@ extern struct superswitch {
+ 	/*
+ 	 * Return spare criteria for array:
+ 	 * - minimum disk size can be used in array;
++	 * - sector size can be used in array.
+ 	 * Return values: 0 - for success and -EINVAL on error.
+ 	 */
+ 	int (*get_spare_criteria)(struct supertype *st,
+@@ -1189,6 +1191,7 @@ extern int get_dev_size(int fd, char *dname, unsigned long long *sizep);
+ extern int get_dev_sector_size(int fd, char *dname, unsigned int *sectsizep);
+ extern int must_be_container(int fd);
+ extern int dev_size_from_id(dev_t id, unsigned long long *size);
++extern int dev_sector_size_from_id(dev_t id, unsigned int *size);
+ void wait_for(char *dev, int fd);
+ 
+ /*
+diff --git a/super-intel.c b/super-intel.c
+index be973f8..ba6f810 100644
+--- a/super-intel.c
++++ b/super-intel.c
+@@ -1396,6 +1396,7 @@ int get_spare_criteria_imsm(struct supertype *st, struct spare_criteria *c)
+ 	unsigned long long size = 0;
+ 
+ 	c->min_size = 0;
++	c->sector_size = 0;
+ 
+ 	if (!super)
+ 		return -EINVAL;
+@@ -1419,6 +1420,7 @@ int get_spare_criteria_imsm(struct supertype *st, struct spare_criteria *c)
+ 	size += imsm_min_reserved_sectors(super);
+ 
+ 	c->min_size = size * 512;
++	c->sector_size = super->sector_size;
+ 
+ 	return 0;
+ }
+diff --git a/util.c b/util.c
+index 8b3c67d..fc9cd3f 100644
+--- a/util.c
++++ b/util.c
+@@ -1265,6 +1265,23 @@ int dev_size_from_id(dev_t id, unsigned long long *size)
+ 	return 0;
+ }
+ 
++int dev_sector_size_from_id(dev_t id, unsigned int *size)
++{
++	char buf[20];
++	int fd;
++
++	sprintf(buf, "%d:%d", major(id), minor(id));
++	fd = dev_open(buf, O_RDONLY);
++	if (fd < 0)
++		return 0;
++	if (get_dev_sector_size(fd, NULL, size)) {
++		close(fd);
++		return 1;
++	}
++	close(fd);
++	return 0;
++}
++
+ struct supertype *dup_super(struct supertype *orig)
+ {
+ 	struct supertype *st;
+@@ -2129,12 +2146,24 @@ struct mdinfo *container_choose_spares(struct supertype *st,
+ 		if (d->disk.state == 0) {
+ 			/* check if size is acceptable */
+ 			unsigned long long dev_size;
++			unsigned int dev_sector_size;
++			int size_valid = 0;
++			int sector_size_valid = 0;
++
+ 			dev_t dev = makedev(d->disk.major,d->disk.minor);
+ 
+ 			if (!criteria->min_size ||
+ 			   (dev_size_from_id(dev,  &dev_size) &&
+ 			    dev_size >= criteria->min_size))
+-				found = 1;
++				size_valid = 1;
++
++			if (!criteria->sector_size ||
++			    (dev_sector_size_from_id(dev, &dev_sector_size) &&
++			     criteria->sector_size == dev_sector_size))
++				sector_size_valid = 1;
++
++			found = size_valid && sector_size_valid;
++
+ 			/* check if domain matches */
+ 			if (found && domlist) {
+ 				struct dev_policy *pol = devid_policy(dev);

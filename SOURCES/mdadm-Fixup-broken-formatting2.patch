@@ -1,0 +1,163 @@
+From d16a749444251c12689fa93d398149025a9c2398 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Tue, 16 May 2017 14:09:57 -0400
+Subject: [RHEL7.5 PATCH 145/169] mdadm: Fixup != broken formatting
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Assemble.c  |  4 ++--
+ Grow.c      | 13 +++++++------
+ policy.c    |  5 ++---
+ restripe.c  |  8 +++++---
+ super-ddf.c |  8 ++++----
+ super0.c    |  8 ++++----
+ 6 files changed, 24 insertions(+), 22 deletions(-)
+
+diff --git a/Assemble.c b/Assemble.c
+index afc6d9c..3c10b6c 100644
+--- a/Assemble.c
++++ b/Assemble.c
+@@ -755,8 +755,8 @@ static int load_devices(struct devs *devices, char *devmap,
+ 			if (best[i] >=0 &&
+ 			    devices[best[i]].i.events ==
+ 			    devices[devcnt].i.events &&
+-			    (devices[best[i]].i.disk.minor
+-			     != devices[devcnt].i.disk.minor) &&
++			    (devices[best[i]].i.disk.minor !=
++			     devices[devcnt].i.disk.minor) &&
+ 			    st->ss == &super0 &&
+ 			    content->array.level != LEVEL_MULTIPATH) {
+ 				/* two different devices with identical superblock.
+diff --git a/Grow.c b/Grow.c
+index db3f18b..ecf5ca0 100644
+--- a/Grow.c
++++ b/Grow.c
+@@ -1403,8 +1403,8 @@ char *analyse_change(char *devname, struct mdinfo *info, struct reshape *re)
+ 			if (info->new_layout == UnSet) {
+ 				int copies = 1 + (info->delta_disks
+ 						  / info->array.raid_disks);
+-				if (info->array.raid_disks * (copies-1)
+-				    != info->delta_disks)
++				if (info->array.raid_disks * (copies-1) !=
++				    info->delta_disks)
+ 					return "Impossible number of devices for RAID0->RAID10";
+ 				info->new_layout = 0x100 + copies;
+ 			}
+@@ -3067,8 +3067,8 @@ static int reshape_array(char *container, int fd, char *devname,
+ 	if (restart &&
+ 	    (reshape.level != info->array.level ||
+ 	     reshape.before.layout != info->array.layout ||
+-	     reshape.before.data_disks + reshape.parity
+-	     != info->array.raid_disks - max(0, info->delta_disks))) {
++	     reshape.before.data_disks + reshape.parity !=
++	     info->array.raid_disks - max(0, info->delta_disks))) {
+ 		pr_err("reshape info is not in native format - cannot continue.\n");
+ 		goto release;
+ 	}
+@@ -4281,8 +4281,9 @@ static int grow_backup(struct mdinfo *sra,
+ 						((char*)&bsb.sb_csum2)-((char*)&bsb));
+ 
+ 		rv = -1;
+-		if ((unsigned long long)lseek64(destfd[i], destoffsets[i] - 4096, 0)
+-		    != destoffsets[i] - 4096)
++		if ((unsigned long long)lseek64(destfd[i],
++						destoffsets[i] - 4096, 0) !=
++		    destoffsets[i] - 4096)
+ 			break;
+ 		if (write(destfd[i], &bsb, 512) != 512)
+ 			break;
+diff --git a/policy.c b/policy.c
+index 064d349..b17585a 100644
+--- a/policy.c
++++ b/policy.c
+@@ -887,9 +887,8 @@ int Write_rules(char *rule_name)
+ 		fd = 1;
+ 
+ 	/* write static invocation */
+-	if (write(fd, udev_template_start,
+-		  sizeof(udev_template_start) - 1)
+-	    != (int)sizeof(udev_template_start)-1)
++	if (write(fd, udev_template_start, sizeof(udev_template_start) - 1) !=
++	    (int)sizeof(udev_template_start) - 1)
+ 		goto abort;
+ 
+ 	/* iterate, if none created or error occurred, remove file */
+diff --git a/restripe.c b/restripe.c
+index 6b31695..31b07e8 100644
+--- a/restripe.c
++++ b/restripe.c
+@@ -581,14 +581,16 @@ int save_stripes(int *source, unsigned long long *offsets,
+ 				       raid_disks, level, layout);
+ 			if (dnum < 0) abort();
+ 			if (source[dnum] < 0 ||
+-			    lseek64(source[dnum], offsets[dnum]+offset, 0) < 0 ||
+-			    read(source[dnum], buf+disk * chunk_size, chunk_size)
+-			    != chunk_size)
++			    lseek64(source[dnum],
++				    offsets[dnum] + offset, 0) < 0 ||
++			    read(source[dnum], buf+disk * chunk_size,
++				 chunk_size) != chunk_size) {
+ 				if (failed <= 2) {
+ 					fdisk[failed] = dnum;
+ 					fblock[failed] = disk;
+ 					failed++;
+ 				}
++			}
+ 		}
+ 		if (failed == 0 || fblock[0] >= data_disks)
+ 			/* all data disks are good */
+diff --git a/super-ddf.c b/super-ddf.c
+index c233601..d02a19a 100644
+--- a/super-ddf.c
++++ b/super-ddf.c
+@@ -3511,8 +3511,8 @@ static int validate_geometry_ddf_bvd(struct supertype *st,
+ 		if (minsize == 0)
+ 			minsize = 8;
+ 		for (dl = ddf->dlist; dl ; dl = dl->next) {
+-			if (find_space(ddf, dl, data_offset, &minsize)
+-			    != INVALID_SECTORS)
++			if (find_space(ddf, dl, data_offset, &minsize) !=
++			    INVALID_SECTORS)
+ 				dcnt++;
+ 		}
+ 		if (dcnt < raiddisks) {
+@@ -4004,8 +4004,8 @@ static int compare_super_ddf(struct supertype *st, struct supertype *tst)
+ 			continue;
+ 
+ 		if (posix_memalign((void **)&dl1, 512,
+-		       sizeof(*dl1) + (first->max_part) * sizeof(dl1->vlist[0]))
+-		    != 0) {
++				   sizeof(*dl1) + (first->max_part) *
++				   sizeof(dl1->vlist[0])) != 0) {
+ 			pr_err("could not allocate disk info buffer\n");
+ 			return 3;
+ 		}
+diff --git a/super0.c b/super0.c
+index dc13efb..756cab5 100644
+--- a/super0.c
++++ b/super0.c
+@@ -589,8 +589,8 @@ static int update_super0(struct supertype *st, struct mdinfo *info,
+ 			 * being marked 'sync'
+ 			 */
+ 			add = (1<<MD_DISK_SYNC);
+-		if (((sb->disks[d].state & ~mask) | add)
+-		    != (unsigned)info->disk.state) {
++		if (((sb->disks[d].state & ~mask) | add) !=
++		    (unsigned)info->disk.state) {
+ 			sb->disks[d].state = info->disk.state | wonly |failfast;
+ 			rv = 1;
+ 		}
+@@ -1058,8 +1058,8 @@ static int load_super0(struct supertype *st, int fd, char *devname)
+ 	 * valid.  If it doesn't clear the bit.  An --assemble --force
+ 	 * should get that written out.
+ 	 */
+-	if (read(fd, super+1, ROUND_UP(sizeof(struct bitmap_super_s),4096))
+-	    != ROUND_UP(sizeof(struct bitmap_super_s),4096))
++	if (read(fd, super+1, ROUND_UP(sizeof(struct bitmap_super_s),4096)) !=
++	    ROUND_UP(sizeof(struct bitmap_super_s), 4096))
+ 		goto no_bitmap;
+ 
+ 	uuid_from_super0(st, uuid);
+-- 
+2.7.4
+

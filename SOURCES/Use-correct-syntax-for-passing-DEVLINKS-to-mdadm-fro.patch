@@ -1,0 +1,49 @@
+From ceb5f8ef92c97d1f44c75a3b74f64aa12a3303ef Mon Sep 17 00:00:00 2001
+From: NeilBrown <neilb@suse.com>
+Date: Fri, 4 Aug 2017 15:30:02 +1000
+Subject: [RHEL7.5 PATCH 165/169] Use correct syntax for passing DEVLINKS
+ to mdadm from udev
+
+ ${DEVLINKS}
+is not valid udev syntax, and is passed through uninterpreted.
+ $env{DEVLINKS}
+or
+  %e{DEVLINKS}
+is correct.
+
+Signed-off-by: NeilBrown <neilb@suse.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ mdadm.8.in                  | 2 +-
+ udev-md-raid-assembly.rules | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/mdadm.8.in b/mdadm.8.in
+index 461c5de..e0747fb 100644
+--- a/mdadm.8.in
++++ b/mdadm.8.in
+@@ -2947,7 +2947,7 @@ This is the only context where the aliases are used.  They are
+ usually provided by a
+ .I udev
+ rules mentioning
+-.BR ${DEVLINKS} .
++.BR $env{DEVLINKS} .
+ 
+ .IP +
+ Does the device have a valid md superblock?  If a specific metadata
+diff --git a/udev-md-raid-assembly.rules b/udev-md-raid-assembly.rules
+index 8ca232a..9f055ed 100644
+--- a/udev-md-raid-assembly.rules
++++ b/udev-md-raid-assembly.rules
+@@ -30,7 +30,7 @@ LABEL="md_inc"
+ 
+ # remember you can limit what gets auto/incrementally assembled by
+ # mdadm.conf(5)'s 'AUTO' and selectively whitelist using 'ARRAY'
+-ACTION=="add|change", IMPORT{program}="BINDIR/mdadm --incremental --export $devnode --offroot ${DEVLINKS}"
++ACTION=="add|change", IMPORT{program}="BINDIR/mdadm --incremental --export $devnode --offroot $env{DEVLINKS}"
+ ACTION=="add|change", ENV{MD_STARTED}=="*unsafe*", ENV{MD_FOREIGN}=="no", ENV{SYSTEMD_WANTS}+="mdadm-last-resort@$env{MD_DEVICE}.timer"
+ ACTION=="remove", ENV{ID_PATH}=="?*", RUN+="BINDIR/mdadm -If $name --path $env{ID_PATH}"
+ ACTION=="remove", ENV{ID_PATH}!="?*", RUN+="BINDIR/mdadm -If $name"
+-- 
+2.7.4
+

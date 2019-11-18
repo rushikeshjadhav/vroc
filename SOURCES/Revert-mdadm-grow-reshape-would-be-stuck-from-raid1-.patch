@@ -1,0 +1,32 @@
+From 2cfe6f7c646ebc25043f7607f5756edad0bc3071 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Tue, 11 Apr 2017 11:30:23 -0400
+Subject: [RHEL7.5 PATCH 069/169] Revert "mdadm/grow: reshape would be
+ stuck from raid1 to raid5"
+
+This reverts commit 5b2846684ef5172eccc432e3520b79efbc2abba5.
+
+This was a red herring and shouldn't have been applied in the first
+place.
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ systemd/mdadm-grow-continue@.service | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/systemd/mdadm-grow-continue@.service b/systemd/mdadm-grow-continue@.service
+index 882bc0b..5c667d2 100644
+--- a/systemd/mdadm-grow-continue@.service
++++ b/systemd/mdadm-grow-continue@.service
+@@ -10,7 +10,7 @@ Description=Manage MD Reshape on /dev/%I
+ DefaultDependencies=no
+ 
+ [Service]
+-ExecStart=BINDIR/mdadm --grow --continue /dev/%i
++ExecStart=BINDIR/mdadm --grow --continue /dev/%I
+ StandardInput=null
+ StandardOutput=null
+ StandardError=null
+-- 
+2.7.4
+

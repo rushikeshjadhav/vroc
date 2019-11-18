@@ -1,0 +1,45 @@
+From 9f3dd4549b2b904d343b79a8a7ba40c547e71d5d Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Thu, 11 May 2017 16:40:16 -0400
+Subject: [RHEL7.5 PATCH 137/169] Monitor: Not much point declaring mdlist
+ in both forks of the if() statement
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Monitor.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/Monitor.c b/Monitor.c
+index 5b95847..a4afe75 100644
+--- a/Monitor.c
++++ b/Monitor.c
+@@ -127,6 +127,7 @@ int Monitor(struct mddev_dev *devlist,
+ 	struct mdstat_ent *mdstat = NULL;
+ 	char *mailfrom = NULL;
+ 	struct alert_info info;
++	struct mddev_ident *mdlist;
+ 
+ 	if (!mailaddr) {
+ 		mailaddr = conf_get_mailaddr();
+@@ -162,7 +163,7 @@ int Monitor(struct mddev_dev *devlist,
+ 			return 1;
+ 
+ 	if (devlist == NULL) {
+-		struct mddev_ident *mdlist = conf_get_ident(NULL);
++		mdlist = conf_get_ident(NULL);
+ 		for (; mdlist; mdlist=mdlist->next) {
+ 			struct state *st;
+ 			if (mdlist->devname == NULL)
+@@ -189,8 +190,8 @@ int Monitor(struct mddev_dev *devlist,
+ 	} else {
+ 		struct mddev_dev *dv;
+ 		for (dv=devlist ; dv; dv=dv->next) {
+-			struct mddev_ident *mdlist = conf_get_ident(dv->devname);
+ 			struct state *st = xcalloc(1, sizeof *st);
++			mdlist = conf_get_ident(dv->devname);
+ 			st->devname = xstrdup(dv->devname);
+ 			st->next = statelist;
+ 			st->devnm[0] = 0;
+-- 
+2.7.4
+

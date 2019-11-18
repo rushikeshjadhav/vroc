@@ -1,0 +1,35 @@
+From 2ec9d182ea5821ec2f7234ff3c0cf07ae9f43cb4 Mon Sep 17 00:00:00 2001
+From: Artur Paszkiewicz <artur.paszkiewicz@intel.com>
+Date: Thu, 28 Sep 2017 14:41:18 +0200
+Subject: [PATCH 12/12] imsm: write initial ppl on a disk added for
+ rebuild
+
+When rebuild is initiated by the UEFI driver it is possible that the new
+disk will not contain a valid ppl header. Just write the initial ppl
+and don't abort assembly.
+
+Signed-off-by: Artur Paszkiewicz <artur.paszkiewicz@intel.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ super-intel.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/super-intel.c b/super-intel.c
+index cf5d822..536cb61 100644
+--- a/super-intel.c
++++ b/super-intel.c
+@@ -6227,7 +6227,10 @@ out:
+ 
+ 		if (map->map_state == IMSM_T_STATE_UNINITIALIZED ||
+ 		   (map->map_state == IMSM_T_STATE_NORMAL &&
+-		   !(dev->vol.dirty & RAIDVOL_DIRTY)))
++		   !(dev->vol.dirty & RAIDVOL_DIRTY)) ||
++		   (dev->vol.migr_state == MIGR_REBUILD &&
++		    dev->vol.curr_migr_unit == 0 &&
++		    get_imsm_disk_idx(dev, disk->disk.raid_disk, MAP_1) != idx))
+ 			ret = st->ss->write_init_ppl(st, info, d->fd);
+ 		else
+ 			info->mismatch_cnt++;
+-- 
+2.7.4
+

@@ -1,0 +1,29 @@
+From 8fac4a54cbafdd8e0a6a0c0b3ce87f1bcdef3d9d Mon Sep 17 00:00:00 2001
+From: Tomasz Majchrzak <tomasz.majchrzak@intel.com>
+Date: Thu, 18 May 2017 15:14:49 +0200
+Subject: [RHEL7.5 PATCH 146/169] manpage: bad block support for IMSM
+
+Signed-off-by: Tomasz Majchrzak <tomasz.majchrzak@intel.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ mdadm.8.in | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/mdadm.8.in b/mdadm.8.in
+index 388e0ed..ecfe9da 100644
+--- a/mdadm.8.in
++++ b/mdadm.8.in
+@@ -2211,8 +2211,8 @@ option. In any case space for a bitmap will be reserved so that one
+ can be added later with
+ .BR "\-\-grow \-\-bitmap=internal" .
+ 
+-If the metadata type supports it (currently only 1.x metadata), space
+-will be allocated to store a bad block list.  This allows a modest
++If the metadata type supports it (currently only 1.x and IMSM metadata),
++space will be allocated to store a bad block list.  This allows a modest
+ number of bad blocks to be recorded, allowing the drive to remain in
+ service while only partially functional.
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,45 @@
+From b4decd517d90098bc2d17d3eddfe858d8b903920 Mon Sep 17 00:00:00 2001
+From: NeilBrown <neilb@suse.com>
+Date: Mon, 27 Mar 2017 14:36:56 +1100
+Subject: [RHEL7.5 PATCH 024/169] Detail: handle non-existent arrays
+ better.
+
+If you call "mdadm --detail" with a device file for an array which
+doesn't exist, such as by
+  mknod /dev/md57 b 9 57
+  mdadm --detail /dev/md57
+
+you get an unhelpful message about and inactive RAID0, and return
+status is '0'.  This is confusing.
+
+So catch this possibility and print a more useful message, and
+return a non-zero status.
+
+Signed-off-by: NeilBrown <neilb@suse.com>
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ Detail.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/Detail.c b/Detail.c
+index cb33794..3d92855 100644
+--- a/Detail.c
++++ b/Detail.c
+@@ -110,6 +110,14 @@ int Detail(char *dev, struct context *c)
+ 	if (ioctl(fd, GET_ARRAY_INFO, &array) == 0) {
+ 		inactive = 0;
+ 	} else if (errno == ENODEV && sra) {
++		if (sra->array.major_version == -1 &&
++		    sra->array.minor_version == -1 &&
++		    sra->devs == NULL) {
++			pr_err("Array associated with md device %s does not exist.\n", dev);
++			close(fd);
++			sysfs_free(sra);
++			return rv;
++		}
+ 		array = sra->array;
+ 		inactive = 1;
+ 	} else {
+-- 
+2.7.4
+

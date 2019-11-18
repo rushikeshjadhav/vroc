@@ -1,0 +1,63 @@
+From 3373d49f32b2bd8149f633727eba453708a9bf9c Mon Sep 17 00:00:00 2001
+From: Song Liu <songliubraving@fb.com>
+Date: Tue, 28 Mar 2017 11:04:44 -0700
+Subject: [RHEL7.5 PATCH 160/169] mdadm/r5cache: allow adding journal to
+ array without journal
+
+Currently, --add-journal can be only used to recreate broken journal
+for arrays with journal since  creation. As the kernel code getting
+more mature, this constraint is no longer necessary.
+
+This patch allows --add-journal to add journal to array without
+journal.
+
+Signed-off-by: Song Liu <songliubraving@fb.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Manage.c   | 6 ------
+ mdadm.8.in | 5 ++---
+ 2 files changed, 2 insertions(+), 9 deletions(-)
+
+diff --git a/Manage.c b/Manage.c
+index 04b9398..b82a729 100644
+--- a/Manage.c
++++ b/Manage.c
+@@ -911,7 +911,6 @@ int Manage_add(int fd, int tfd, struct mddev_dev *dv,
+ 
+ 	/* only add journal to array that supports journaling */
+ 	if (dv->disposition == 'j') {
+-		struct mdinfo mdi;
+ 		struct mdinfo *mdp;
+ 
+ 		mdp = sysfs_read(fd, NULL, GET_ARRAY_STATE);
+@@ -928,11 +927,6 @@ int Manage_add(int fd, int tfd, struct mddev_dev *dv,
+ 
+ 		sysfs_free(mdp);
+ 
+-		tst->ss->getinfo_super(tst, &mdi, NULL);
+-		if (mdi.journal_device_required == 0) {
+-			pr_err("%s does not support journal device.\n", devname);
+-			return -1;
+-		}
+ 		disc.raid_disk = 0;
+ 	}
+ 
+diff --git a/mdadm.8.in b/mdadm.8.in
+index ecfe9da..461c5de 100644
+--- a/mdadm.8.in
++++ b/mdadm.8.in
+@@ -1526,9 +1526,8 @@ the device is found or <slot>:missing in case the device is not found.
+ 
+ .TP
+ .BR \-\-add-journal
+-Recreate journal for RAID-4/5/6 array that lost a journal device. In the
+-current implementation, this command cannot add a journal to an array
+-that had a failed journal. To avoid interrupting on-going write opertions,
++Add journal to an existing array, or recreate journal for RAID-4/5/6 array
++that lost a journal device. To avoid interrupting on-going write opertions,
+ .B \-\-add-journal
+ only works for array in Read-Only state.
+ 
+-- 
+2.7.4
+

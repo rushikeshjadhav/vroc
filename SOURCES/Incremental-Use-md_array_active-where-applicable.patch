@@ -1,0 +1,41 @@
+From ff4ad24b1c261ab4d286cbe54157d7c588191692 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Tue, 25 Apr 2017 14:57:46 -0400
+Subject: [RHEL7.5 PATCH 098/169] Incremental: Use md_array_active() where
+ applicable
+
+md_get_array_info() == 0 implies an array is active, however this is more
+correct.
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Incremental.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/Incremental.c b/Incremental.c
+index 28f1f77..a351151 100644
+--- a/Incremental.c
++++ b/Incremental.c
+@@ -403,7 +403,7 @@ int Incremental(struct mddev_dev *devlist, struct context *c,
+ 		    && ! policy_action_allows(policy, st->ss->name,
+ 					      act_re_add)
+ 		    && c->runstop < 1) {
+-			if (md_get_array_info(mdfd, &ainf) == 0) {
++			if (md_array_active(mdfd)) {
+ 				pr_err("not adding %s to active array (without --run) %s\n",
+ 				       devname, chosen_name);
+ 				rv = 2;
+@@ -667,9 +667,8 @@ static void find_reject(int mdfd, struct supertype *st, struct mdinfo *sra,
+ 	 * and events less than the passed events, and remove the device.
+ 	 */
+ 	struct mdinfo *d;
+-	mdu_array_info_t ra;
+ 
+-	if (md_get_array_info(mdfd, &ra) == 0)
++	if (md_array_active(mdfd))
+ 		return; /* not safe to remove from active arrays
+ 			 * without thinking more */
+ 
+-- 
+2.7.4
+

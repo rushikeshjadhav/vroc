@@ -1,0 +1,153 @@
+From 018a488238e2ff55d7c2fd29333c1f7305354318 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Wed, 29 Mar 2017 15:43:53 -0400
+Subject: [RHEL7.5 PATCH 040/169] util: Introduce md_set_array_info()
+
+Switch from using ioctl(SET_ARRAY_INFO) to using md_set_array_info()
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ Build.c |  4 ++--
+ Grow.c  | 17 ++++++++---------
+ mdadm.h |  1 +
+ util.c  | 12 ++++++++++--
+ 4 files changed, 21 insertions(+), 13 deletions(-)
+
+diff --git a/Build.c b/Build.c
+index a5fcc06..691dd6f 100644
+--- a/Build.c
++++ b/Build.c
+@@ -148,8 +148,8 @@ int Build(char *mddev, struct mddev_dev *devlist,
+ 			s->chunk = 64;
+ 		array.chunk_size = s->chunk*1024;
+ 		array.layout = s->layout;
+-		if (ioctl(mdfd, SET_ARRAY_INFO, &array)) {
+-			pr_err("SET_ARRAY_INFO failed for %s: %s\n",
++		if (md_set_array_info(mdfd, &array)) {
++			pr_err("md_set_array_info() failed for %s: %s\n",
+ 				mddev, strerror(errno));
+ 			goto abort;
+ 		}
+diff --git a/Grow.c b/Grow.c
+index 1c90902..af8d520 100755
+--- a/Grow.c
++++ b/Grow.c
+@@ -335,7 +335,7 @@ int Grow_addbitmap(char *devname, int fd, struct context *c, struct shape *s)
+ 	if (array.state & (1 << MD_SB_BITMAP_PRESENT)) {
+ 		if (strcmp(s->bitmap_file, "none")==0) {
+ 			array.state &= ~(1 << MD_SB_BITMAP_PRESENT);
+-			if (ioctl(fd, SET_ARRAY_INFO, &array) != 0) {
++			if (md_set_array_info(fd, &array) != 0) {
+ 				if (array.state & (1 << MD_SB_CLUSTERED))
+ 					pr_err("failed to remove clustered bitmap.\n");
+ 				else
+@@ -463,7 +463,7 @@ int Grow_addbitmap(char *devname, int fd, struct context *c, struct shape *s)
+ 			if (strcmp(s->bitmap_file, "clustered") == 0)
+ 				array.state |= (1 << MD_SB_CLUSTERED);
+ 			array.state |= (1 << MD_SB_BITMAP_PRESENT);
+-			rv = ioctl(fd, SET_ARRAY_INFO, &array);
++			rv = md_set_array_info(fd, &array);
+ 		}
+ 		if (rv < 0) {
+ 			if (errno == EBUSY)
+@@ -1823,7 +1823,7 @@ int Grow_reshape(char *devname, int fd,
+ 	    (array.state & (1<<MD_SB_BITMAP_PRESENT)) &&
+ 	    !(array.state & (1<<MD_SB_CLUSTERED))) {
+                 array.state &= ~(1<<MD_SB_BITMAP_PRESENT);
+-                if (ioctl(fd, SET_ARRAY_INFO, &array)!= 0) {
++                if (md_set_array_info(fd, &array)!= 0) {
+                         pr_err("failed to remove internal bitmap.\n");
+                         return 1;
+                 }
+@@ -2056,7 +2056,7 @@ int Grow_reshape(char *devname, int fd,
+ 			else
+ 				rv = -1;
+ 		} else {
+-			rv = ioctl(fd, SET_ARRAY_INFO, &array);
++			rv = md_set_array_info(fd, &array);
+ 
+ 			/* manage array size when it is managed externally
+ 			 */
+@@ -2272,7 +2272,7 @@ size_change_error:
+ 				goto release;
+ 			}
+ 			array.layout = info.new_layout;
+-			if (ioctl(fd, SET_ARRAY_INFO, &array) != 0) {
++			if (md_set_array_info(fd, &array) != 0) {
+ 				pr_err("failed to set new layout\n");
+ 				rv = 1;
+ 			} else if (c->verbose >= 0)
+@@ -2836,8 +2836,7 @@ static int impose_reshape(struct mdinfo *sra,
+ 	    st->ss->external == 0) {
+ 		/* use SET_ARRAY_INFO but only if reshape hasn't started */
+ 		array.raid_disks = reshape->after.data_disks + reshape->parity;
+-		if (!restart &&
+-		    ioctl(fd, SET_ARRAY_INFO, &array) != 0) {
++		if (!restart && md_set_array_info(fd, &array) != 0) {
+ 			int err = errno;
+ 
+ 			pr_err("Cannot set device shape for %s: %s\n",
+@@ -3239,7 +3238,7 @@ static int reshape_array(char *container, int fd, char *devname,
+ 		if (info->new_layout != UnSet &&
+ 		    info->new_layout != array.layout) {
+ 			array.layout = info->new_layout;
+-			if (ioctl(fd, SET_ARRAY_INFO, &array) != 0) {
++			if (md_set_array_info(fd, &array) != 0) {
+ 				pr_err("failed to set new layout\n");
+ 				goto release;
+ 			} else if (verbose >= 0)
+@@ -3250,7 +3249,7 @@ static int reshape_array(char *container, int fd, char *devname,
+ 		    info->delta_disks != 0 &&
+ 		    array.raid_disks != (info->array.raid_disks + info->delta_disks)) {
+ 			array.raid_disks += info->delta_disks;
+-			if (ioctl(fd, SET_ARRAY_INFO, &array) != 0) {
++			if (md_set_array_info(fd, &array) != 0) {
+ 				pr_err("failed to set raid disks\n");
+ 				goto release;
+ 			} else if (verbose >= 0) {
+diff --git a/mdadm.h b/mdadm.h
+index 3ab548f..084bc97 100644
+--- a/mdadm.h
++++ b/mdadm.h
+@@ -1406,6 +1406,7 @@ extern int Restore_metadata(char *dev, char *dir, struct context *c,
+ 
+ extern int md_get_version(int fd);
+ int md_get_array_info(int fd, struct mdu_array_info_s *array);
++int md_set_array_info(int fd, struct mdu_array_info_s *array);
+ int md_get_disk_info(int fd, struct mdu_disk_info_s *disk);
+ extern int get_linux_version(void);
+ extern int mdadm_version(char *version);
+diff --git a/util.c b/util.c
+index aa27e59..9fc7ba0 100644
+--- a/util.c
++++ b/util.c
+@@ -221,6 +221,14 @@ int md_get_array_info(int fd, struct mdu_array_info_s *array)
+ }
+ 
+ /*
++ * Set array info
++ */
++int md_set_array_info(int fd, struct mdu_array_info_s *array)
++{
++	return ioctl(fd, SET_ARRAY_INFO, array);
++}
++
++/*
+  * Get disk info from the kernel.
+  */
+ int md_get_disk_info(int fd, struct mdu_disk_info_s *disk)
+@@ -1858,9 +1866,9 @@ int set_array_info(int mdfd, struct supertype *st, struct mdinfo *info)
+ 		memset(&inf, 0, sizeof(inf));
+ 		inf.major_version = info->array.major_version;
+ 		inf.minor_version = info->array.minor_version;
+-		rv = ioctl(mdfd, SET_ARRAY_INFO, &inf);
++		rv = md_set_array_info(mdfd, &inf);
+ 	} else
+-		rv = ioctl(mdfd, SET_ARRAY_INFO, NULL);
++		rv = md_set_array_info(mdfd, NULL);
+ 	return rv;
+ }
+ 
+-- 
+2.7.4
+

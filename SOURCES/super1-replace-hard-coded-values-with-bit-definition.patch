@@ -1,0 +1,46 @@
+From aa3131183661955de112fa7d9824207de63d9fa5 Mon Sep 17 00:00:00 2001
+From: Gioh Kim <gi-oh.kim@profitbricks.com>
+Date: Wed, 29 Mar 2017 11:40:33 +0200
+Subject: [RHEL7.5 PATCH 032/169] super1: replace hard-coded values with
+ bit definitions
+
+Some hard-coded values for disk status are replaced
+with bit definitions.
+
+Signed-off-by: Gioh Kim <gi-oh.kim@profitbricks.com>
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ super1.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/super1.c b/super1.c
+index e76f777..6f91611 100644
+--- a/super1.c
++++ b/super1.c
+@@ -1040,7 +1040,7 @@ static void getinfo_super1(struct supertype *st, struct mdinfo *info, char *map)
+ 		info->disk.state = 0; /* spare: not active, not sync, not faulty */
+ 		break;
+ 	case MD_DISK_ROLE_FAULTY:
+-		info->disk.state = 1; /* faulty */
++		info->disk.state = (1 << MD_DISK_FAULTY); /* faulty */
+ 		break;
+ 	case MD_DISK_ROLE_JOURNAL:
+ 		info->disk.state = (1 << MD_DISK_JOURNAL);
+@@ -1600,11 +1600,12 @@ static int add_to_super1(struct supertype *st, mdu_disk_info_t *dk,
+ 	}
+ 
+ 	dk_state = dk->state & ~(1<<MD_DISK_FAILFAST);
+-	if ((dk_state & 6) == 6) /* active, sync */
++	if ((dk_state & (1<<MD_DISK_ACTIVE)) &&
++	    (dk_state & (1<<MD_DISK_SYNC)))/* active, sync */
+ 		*rp = __cpu_to_le16(dk->raid_disk);
+ 	else if (dk_state & (1<<MD_DISK_JOURNAL))
+                 *rp = MD_DISK_ROLE_JOURNAL;
+-	else if ((dk_state & ~2) == 0) /* active or idle -> spare */
++	else if ((dk_state & ~(1<<MD_DISK_ACTIVE)) == 0) /* active or idle -> spare */
+ 		*rp = MD_DISK_ROLE_SPARE;
+ 	else
+ 		*rp = MD_DISK_ROLE_FAULTY;
+-- 
+2.7.4
+

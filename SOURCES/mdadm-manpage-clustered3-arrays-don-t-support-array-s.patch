@@ -1,0 +1,31 @@
+From e39c76b9b72db00d32780e9f30dfba25f58922d2 Mon Sep 17 00:00:00 2001
+From: Zhilong Liu <zlliu@suse.com>
+Date: Wed, 12 Apr 2017 16:37:27 +0800
+Subject: [RHEL7.5 PATCH 074/169] mdadm/manpage:clustered arrays don't
+ support array-size yet
+
+Update manpage for array-size section:
+Clustered arrays don't support the --array-size yet.
+
+Signed-off-by: Zhilong Liu <zlliu@suse.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ mdadm.8.in | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/mdadm.8.in b/mdadm.8.in
+index f10a8b8..fb99a5c 100644
+--- a/mdadm.8.in
++++ b/mdadm.8.in
+@@ -541,6 +541,8 @@ A value of
+ restores the apparent size of the array to be whatever the real
+ amount of available space is.
+ 
++Clustered arrays do not support this parameter yet.
++
+ .TP
+ .BR \-c ", " \-\-chunk=
+ Specify chunk size of kilobytes.  The default when creating an
+-- 
+2.7.4
+

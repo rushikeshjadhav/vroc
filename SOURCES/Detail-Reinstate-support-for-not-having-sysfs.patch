@@ -1,0 +1,37 @@
+From 0885b942b3575c7f2a8290087751d83902587371 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Tue, 25 Apr 2017 14:34:31 -0400
+Subject: [RHEL7.5 PATCH 097/169] Detail: Reinstate support for not having
+ sysfs
+
+While sysfs support will hopefully go away eventually, lets not break
+it unnecessarily for now.
+
+Fixes: 901d5ee ("Detail: Stop bothering about md drivers older than 0.90.00")
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Detail.c | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/Detail.c b/Detail.c
+index ceb21b1..ef2370c 100644
+--- a/Detail.c
++++ b/Detail.c
+@@ -88,9 +88,11 @@ int Detail(char *dev, struct context *c)
+ 	}
+ 	sra = sysfs_read(fd, NULL, GET_VERSION | GET_DEVS | GET_ARRAY_STATE);
+ 	if (!sra) {
+-		pr_err("%s does not appear to be an md device\n", dev);
+-		close(fd);
+-		return rv;
++		if (md_get_array_info(fd, &array)) {
++			pr_err("%s does not appear to be an md device\n", dev);
++			close(fd);
++			return rv;
++		}
+ 	}
+ 	external = (sra != NULL && sra->array.major_version == -1 &&
+ 		    sra->array.minor_version == -2);
+-- 
+2.7.4
+

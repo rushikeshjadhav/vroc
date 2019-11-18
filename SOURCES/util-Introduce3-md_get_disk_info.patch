@@ -1,0 +1,268 @@
+From d97572f5a59ca1ddde9971a79d47c9ea4db5891b Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Wed, 29 Mar 2017 15:23:50 -0400
+Subject: [RHEL7.5 PATCH 039/169] util: Introduce md_get_disk_info()
+
+This removes all the inline ioctl calls for GET_DISK_INFO, allowing us
+to switch to sysfs in one place, and improves type checking.
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ Detail.c  |  8 +++-----
+ Grow.c    | 14 +++++++-------
+ Manage.c  | 19 +++++++++----------
+ Monitor.c |  2 +-
+ Query.c   |  2 +-
+ mdadm.h   |  1 +
+ util.c    | 10 +++++++++-
+ 7 files changed, 31 insertions(+), 25 deletions(-)
+
+diff --git a/Detail.c b/Detail.c
+index d7e886a..fa6d4c7 100644
+--- a/Detail.c
++++ b/Detail.c
+@@ -51,10 +51,8 @@ static int add_device(const char *dev, char ***p_devices,
+ int Detail(char *dev, struct context *c)
+ {
+ 	/*
+-	 * Print out details for an md array by using
+-	 * GET_ARRAY_INFO and GET_DISK_INFO ioctl calls
++	 * Print out details for an md array
+ 	 */
+-
+ 	int fd = open(dev, O_RDONLY);
+ 	int vers;
+ 	mdu_array_info_t array;
+@@ -165,7 +163,7 @@ int Detail(char *dev, struct context *c)
+ 			disk = subdev->disk;
+ 		else {
+ 			disk.number = d;
+-			if (ioctl(fd, GET_DISK_INFO, &disk) < 0)
++			if (md_get_disk_info(fd, &disk) < 0)
+ 				continue;
+ 			if (d >= array.raid_disks &&
+ 			    disk.major == 0 &&
+@@ -322,7 +320,7 @@ int Detail(char *dev, struct context *c)
+ 	} else for (d = 0; d < max_disks; d++) {
+ 		mdu_disk_info_t disk;
+ 		disk.number = d;
+-		if (ioctl(fd, GET_DISK_INFO, &disk) < 0) {
++		if (md_get_disk_info(fd, &disk) < 0) {
+ 			if (d < array.raid_disks)
+ 				pr_err("cannot get device detail for device %d: %s\n",
+ 					d, strerror(errno));
+diff --git a/Grow.c b/Grow.c
+index 4eab5cc..1c90902 100755
+--- a/Grow.c
++++ b/Grow.c
+@@ -161,7 +161,7 @@ int Grow_Add_device(char *devname, int fd, char *newdev)
+ 		st->ss->free_super(st);
+ 
+ 		disk.number = d;
+-		if (ioctl(fd, GET_DISK_INFO, &disk) < 0) {
++		if (md_get_disk_info(fd, &disk) < 0) {
+ 			pr_err("cannot get device detail for device %d\n",
+ 				d);
+ 			close(nfd);
+@@ -232,7 +232,7 @@ int Grow_Add_device(char *devname, int fd, char *newdev)
+ 		char *dv;
+ 
+ 		disk.number = d;
+-		if (ioctl(fd, GET_DISK_INFO, &disk) < 0) {
++		if (md_get_disk_info(fd, &disk) < 0) {
+ 			pr_err("cannot get device detail for device %d\n",
+ 				d);
+ 			return 1;
+@@ -422,7 +422,7 @@ int Grow_addbitmap(char *devname, int fd, struct context *c, struct shape *s)
+ 			int fd2;
+ 
+ 			disk.number = d;
+-			if (ioctl(fd, GET_DISK_INFO, &disk) < 0)
++			if (md_get_disk_info(fd, &disk) < 0)
+ 				continue;
+ 			if (disk.major == 0 && disk.minor == 0)
+ 				continue;
+@@ -483,7 +483,7 @@ int Grow_addbitmap(char *devname, int fd, struct context *c, struct shape *s)
+ 			char *dv;
+ 			int fd2;
+ 			disk.number = d;
+-			if (ioctl(fd, GET_DISK_INFO, &disk) < 0)
++			if (md_get_disk_info(fd, &disk) < 0)
+ 				continue;
+ 			if ((disk.major==0 && disk.minor == 0) ||
+ 			    (disk.state & (1 << MD_DISK_REMOVED)))
+@@ -2908,7 +2908,7 @@ static int impose_level(int fd, int level, char *devname, int verbose)
+ 		     d++) {
+ 			mdu_disk_info_t disk;
+ 			disk.number = d;
+-			if (ioctl(fd, GET_DISK_INFO, &disk) < 0)
++			if (md_get_disk_info(fd, &disk) < 0)
+ 				continue;
+ 			if (disk.major == 0 && disk.minor == 0)
+ 				continue;
+@@ -2927,7 +2927,7 @@ static int impose_level(int fd, int level, char *devname, int verbose)
+ 		     d++) {
+ 			mdu_disk_info_t disk;
+ 			disk.number = d;
+-			if (ioctl(fd, GET_DISK_INFO, &disk) < 0)
++			if (md_get_disk_info(fd, &disk) < 0)
+ 				continue;
+ 			if (disk.major == 0 && disk.minor == 0)
+ 				continue;
+@@ -5011,7 +5011,7 @@ int Grow_continue_command(char *devname, int fd,
+ 				char *dv;
+ 				int err;
+ 				disk.number = d;
+-				if (ioctl(fd, GET_DISK_INFO, &disk) < 0)
++				if (md_get_disk_info(fd, &disk) < 0)
+ 					continue;
+ 				if (disk.major == 0 && disk.minor == 0)
+ 					continue;
+diff --git a/Manage.c b/Manage.c
+index 24ed370..0ffb6c6 100644
+--- a/Manage.c
++++ b/Manage.c
+@@ -546,7 +546,7 @@ static void add_faulty(struct mddev_dev *dv, int fd, char disp)
+ 	for (i = 0; i < MAX_DISKS && remaining_disks > 0; i++) {
+ 		char buf[40];
+ 		disk.number = i;
+-		if (ioctl(fd, GET_DISK_INFO, &disk) != 0)
++		if (md_get_disk_info(fd, &disk) != 0)
+ 			continue;
+ 		if (disk.major == 0 && disk.minor == 0)
+ 			continue;
+@@ -573,7 +573,7 @@ static void add_detached(struct mddev_dev *dv, int fd, char disp)
+ 		char buf[40];
+ 		int sfd;
+ 		disk.number = i;
+-		if (ioctl(fd, GET_DISK_INFO, &disk) != 0)
++		if (md_get_disk_info(fd, &disk) != 0)
+ 			continue;
+ 		if (disk.major == 0 && disk.minor == 0)
+ 			continue;
+@@ -615,7 +615,7 @@ static void add_set(struct mddev_dev *dv, int fd, char set_char)
+ 	for (i = 0; i < MAX_DISKS && remaining_disks > 0; i++) {
+ 		char buf[40];
+ 		disk.number = i;
+-		if (ioctl(fd, GET_DISK_INFO, &disk) != 0)
++		if (md_get_disk_info(fd, &disk) != 0)
+ 			continue;
+ 		if (disk.major == 0 && disk.minor == 0)
+ 			continue;
+@@ -661,9 +661,8 @@ int attempt_re_add(int fd, int tfd, struct mddev_dev *dv,
+ 		    get_linux_version() <= 2006018)
+ 			goto skip_re_add;
+ 		disc.number = mdi.disk.number;
+-		if (ioctl(fd, GET_DISK_INFO, &disc) != 0
+-		    || disc.major != 0 || disc.minor != 0
+-			)
++		if (md_get_disk_info(fd, &disc) != 0 ||
++		    disc.major != 0 || disc.minor != 0)
+ 			goto skip_re_add;
+ 		disc.major = major(rdev);
+ 		disc.minor = minor(rdev);
+@@ -805,7 +804,7 @@ int Manage_add(int fd, int tfd, struct mddev_dev *dv,
+ 				char *dev;
+ 				int dfd;
+ 				disc.number = j;
+-				if (ioctl(fd, GET_DISK_INFO, &disc))
++				if (md_get_disk_info(fd, &disc))
+ 					continue;
+ 				if (disc.major==0 && disc.minor==0)
+ 					continue;
+@@ -888,7 +887,7 @@ int Manage_add(int fd, int tfd, struct mddev_dev *dv,
+ 
+ 			for (d = 0; d < MAX_DISKS && found < array->nr_disks; d++) {
+ 				disc.number = d;
+-				if (ioctl(fd, GET_DISK_INFO, &disc))
++				if (md_get_disk_info(fd, &disc))
+ 					continue;
+ 				if (disc.major == 0 && disc.minor == 0)
+ 					continue;
+@@ -929,7 +928,7 @@ int Manage_add(int fd, int tfd, struct mddev_dev *dv,
+ 	 */
+ 	for (j = array->raid_disks; j < tst->max_devs; j++) {
+ 		disc.number = j;
+-		if (ioctl(fd, GET_DISK_INFO, &disc))
++		if (md_get_disk_info(fd, &disc))
+ 			break;
+ 		if (disc.major==0 && disc.minor==0)
+ 			break;
+@@ -994,7 +993,7 @@ int Manage_add(int fd, int tfd, struct mddev_dev *dv,
+ 		for (j = 0; j < tst->max_devs; j++) {
+ 			mdu_disk_info_t disc2;
+ 			disc2.number = j;
+-			if (ioctl(fd, GET_DISK_INFO, &disc2))
++			if (md_get_disk_info(fd, &disc2))
+ 				continue;
+ 			if (disc2.major==0 && disc2.minor==0)
+ 				continue;
+diff --git a/Monitor.c b/Monitor.c
+index 0a0a1e2..2c0f717 100644
+--- a/Monitor.c
++++ b/Monitor.c
+@@ -608,7 +608,7 @@ static int check_array(struct state *st, struct mdstat_ent *mdstat,
+ 	     i++) {
+ 		mdu_disk_info_t disc;
+ 		disc.number = i;
+-		if (ioctl(fd, GET_DISK_INFO, &disc) >= 0) {
++		if (md_get_disk_info(fd, &disc) >= 0) {
+ 			info[i].state = disc.state;
+ 			info[i].major = disc.major;
+ 			info[i].minor = disc.minor;
+diff --git a/Query.c b/Query.c
+index cae75d1..a2c839c 100644
+--- a/Query.c
++++ b/Query.c
+@@ -102,7 +102,7 @@ int Query(char *dev)
+ 			if (mddev && (fd = open(mddev, O_RDONLY))>=0) {
+ 				if (md_get_version(fd) >= 9000 &&
+ 				    md_get_array_info(fd, &array) >= 0) {
+-					if (ioctl(fd, GET_DISK_INFO, &disc) >= 0 &&
++					if (md_get_disk_info(fd, &disc) >= 0 &&
+ 					    makedev((unsigned)disc.major,(unsigned)disc.minor) == stb.st_rdev)
+ 						activity = "active";
+ 					else
+diff --git a/mdadm.h b/mdadm.h
+index 7770585..3ab548f 100644
+--- a/mdadm.h
++++ b/mdadm.h
+@@ -1406,6 +1406,7 @@ extern int Restore_metadata(char *dev, char *dir, struct context *c,
+ 
+ extern int md_get_version(int fd);
+ int md_get_array_info(int fd, struct mdu_array_info_s *array);
++int md_get_disk_info(int fd, struct mdu_disk_info_s *disk);
+ extern int get_linux_version(void);
+ extern int mdadm_version(char *version);
+ extern unsigned long long parse_size(char *size);
+diff --git a/util.c b/util.c
+index 725877d..aa27e59 100644
+--- a/util.c
++++ b/util.c
+@@ -221,6 +221,14 @@ int md_get_array_info(int fd, struct mdu_array_info_s *array)
+ }
+ 
+ /*
++ * Get disk info from the kernel.
++ */
++int md_get_disk_info(int fd, struct mdu_disk_info_s *disk)
++{
++	return ioctl(fd, GET_DISK_INFO, disk);
++}
++
++/*
+  * Parse a 128 bit uuid in 4 integers
+  * format is 32 hexx nibbles with options :.<space> separator
+  * If not exactly 32 hex digits are found, return 0
+@@ -553,7 +561,7 @@ int enough_fd(int fd)
+ 	avail = xcalloc(array.raid_disks, 1);
+ 	for (i = 0; i < MAX_DISKS && array.nr_disks > 0; i++) {
+ 		disk.number = i;
+-		if (ioctl(fd, GET_DISK_INFO, &disk) != 0)
++		if (md_get_disk_info(fd, &disk) != 0)
+ 			continue;
+ 		if (disk.major == 0 && disk.minor == 0)
+ 			continue;
+-- 
+2.7.4
+

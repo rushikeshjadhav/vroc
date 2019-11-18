@@ -1,0 +1,32 @@
+From 27c48b375d8fb6b4835fd9b11593c75d247ea1c1 Mon Sep 17 00:00:00 2001
+From: Zhilong Liu <zlliu@suse.com>
+Date: Mon, 20 Mar 2017 13:21:03 +0800
+Subject: [RHEL7.5 PATCH 012/169] mdadm:it doesn't make sense to set
+ --bitmap twice
+
+mdadm.c: it doesn't make sense to set --bitmap twice.
+
+Signed-off-by: Zhilong Liu <zlliu@suse.com>
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ mdadm.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/mdadm.c b/mdadm.c
+index d6ad8dc..08ddcab 100644
+--- a/mdadm.c
++++ b/mdadm.c
+@@ -1139,6 +1139,10 @@ int main(int argc, char *argv[])
+ 		case O(CREATE,Bitmap): /* here we create the bitmap */
+ 		case O(GROW,'b'):
+ 		case O(GROW,Bitmap):
++			if (s.bitmap_file) {
++				pr_err("bitmap cannot be set twice. Second value: %s.\n", optarg);
++				exit(2);
++			}
+ 			if (strcmp(optarg, "internal") == 0 ||
+ 			    strcmp(optarg, "none") == 0 ||
+ 			    strchr(optarg, '/') != NULL) {
+-- 
+2.7.4
+

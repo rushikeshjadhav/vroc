@@ -1,0 +1,9 @@
+[Unit]
+Description=Enclosure LED Utilities
+
+[Service]
+ExecStart=/usr/sbin/ledmon
+Type=forking
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,39 @@
+From 4c829c2252d2a6fb4871ec0cdad58b6c3a0218fd Mon Sep 17 00:00:00 2001
+From: Zhilong Liu <zlliu@suse.com>
+Date: Mon, 20 Mar 2017 18:46:39 +0800
+Subject: [RHEL7.5 PATCH 018/169] mdadm/bitmap:fixed typos in comments of
+ bitmap.h
+
+bitmap.h: fixed trivial typos in comments
+
+Signed-off-by: Zhilong Liu <zlliu@suse.com>
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ bitmap.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/bitmap.h b/bitmap.h
+index b8fb071..7b1f80f 100644
+--- a/bitmap.h
++++ b/bitmap.h
+@@ -46,7 +46,7 @@
+  *
+  * The counter counts pending write requests, plus the on-disk bit.
+  * When the counter is '1' and the resync bits are clear, the on-disk
+- * bit can be cleared aswell, thus setting the counter to 0.
++ * bit can be cleared as well, thus setting the counter to 0.
+  * When we set a bit, or in the counter (to start a write), if the fields is
+  * 0, we first set the disk bit and set the counter to 1.
+  *
+@@ -185,7 +185,7 @@ struct bitmap_page {
+ 	 */
+ 	char *map;
+ 	/*
+-	 * in emergencies (when map cannot be alloced), hijack the map
++	 * in emergencies (when map cannot be allocated), hijack the map
+ 	 * pointer and use it as two counters itself
+ 	 */
+ 	unsigned int hijacked;
+-- 
+2.7.4
+

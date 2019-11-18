@@ -1,0 +1,38 @@
+From 826522f0dc86d31cc7207b01957b5c4243f49dc8 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Tue, 9 May 2017 16:41:06 -0400
+Subject: [RHEL7.5 PATCH 127/169] Monitor/check_array: Declate mdinfo
+ instance globally
+
+We can pull in more information from sysfs earlier, so move sra to the top.
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Monitor.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Monitor.c b/Monitor.c
+index c519877..bb3a2c4 100644
+--- a/Monitor.c
++++ b/Monitor.c
+@@ -451,6 +451,7 @@ static int check_array(struct state *st, struct mdstat_ent *mdstat,
+ 	 * '1' if the array is degraded, or '0' if it is optimal (or dead).
+ 	 */
+ 	struct { int state, major, minor; } info[MAX_DISKS];
++	struct mdinfo *sra;
+ 	mdu_array_info_t array;
+ 	struct mdstat_ent *mse = NULL, *mse2;
+ 	char *dev = st->devname;
+@@ -556,8 +557,7 @@ static int check_array(struct state *st, struct mdstat_ent *mdstat,
+ 		 * If there is a number in /mismatch_cnt,
+ 		 * we should report that.
+ 		 */
+-		struct mdinfo *sra =
+-			sysfs_read(-1, st->devnm, GET_MISMATCH);
++		sra = sysfs_read(-1, st->devnm, GET_MISMATCH);
+ 		if (sra && sra->mismatch_cnt > 0) {
+ 			char cnt[80];
+ 			snprintf(cnt, sizeof(cnt),
+-- 
+2.7.4
+

@@ -1,0 +1,41 @@
+From 49948a3561dcd48a94b1c5e98a6d23c9263d1ca3 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Thu, 30 Mar 2017 10:46:01 -0400
+Subject: [RHEL7.5 PATCH 043/169] Grow: Do not shadow an existing variable
+
+Declaring 'int rv' twice within the same function is asking for
+trouble.
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ Grow.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/Grow.c b/Grow.c
+index 0d551ce..0c16d5b 100755
+--- a/Grow.c
++++ b/Grow.c
+@@ -1834,7 +1834,7 @@ int Grow_reshape(char *devname, int fd,
+ 	 * pre-requisite spare devices (mdmon owns final validation)
+ 	 */
+ 	if (st->ss->external) {
+-		int rv;
++		int retval;
+ 
+ 		if (subarray) {
+ 			container = st->container_devnm;
+@@ -1852,9 +1852,9 @@ int Grow_reshape(char *devname, int fd,
+ 			return 1;
+ 		}
+ 
+-		rv = st->ss->load_container(st, cfd, NULL);
++		retval = st->ss->load_container(st, cfd, NULL);
+ 
+-		if (rv) {
++		if (retval) {
+ 			pr_err("Cannot read superblock for %s\n",
+ 				devname);
+ 			free(subarray);
+-- 
+2.7.4
+

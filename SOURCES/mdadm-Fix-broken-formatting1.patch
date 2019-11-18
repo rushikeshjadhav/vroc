@@ -1,0 +1,121 @@
+From b831b299e864224b389743d8a435d6629ee674e3 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Tue, 16 May 2017 14:04:22 -0400
+Subject: [RHEL7.5 PATCH 144/169] mdadm: Fix '==' broken formatting
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Detail.c      |  6 +++---
+ config.c      |  4 ++--
+ managemon.c   |  4 ++--
+ super-ddf.c   | 16 ++++++++--------
+ super-intel.c |  2 +-
+ 5 files changed, 16 insertions(+), 16 deletions(-)
+
+diff --git a/Detail.c b/Detail.c
+index ef2370c..bf881ff 100644
+--- a/Detail.c
++++ b/Detail.c
+@@ -714,9 +714,9 @@ This is pretty boring
+ 			if (disk.state & (1 << MD_DISK_JOURNAL))
+ 				printf(" journal");
+ 			if ((disk.state &
+-			     ((1<<MD_DISK_ACTIVE)|(1<<MD_DISK_SYNC)
+-			      |(1<<MD_DISK_REMOVED)|(1<<MD_DISK_FAULTY)|(1<<MD_DISK_JOURNAL)))
+-			    == 0) {
++			     ((1 << MD_DISK_ACTIVE) | (1 << MD_DISK_SYNC) |
++			      (1 << MD_DISK_REMOVED) | (1 << MD_DISK_FAULTY) |
++			      (1 << MD_DISK_JOURNAL))) == 0) {
+ 				printf(" spare");
+ 				if (disk.raid_disk < array.raid_disks &&
+ 				    disk.raid_disk >= 0)
+diff --git a/config.c b/config.c
+index 9b008e3..48e0278 100644
+--- a/config.c
++++ b/config.c
+@@ -1118,8 +1118,8 @@ struct mddev_ident *conf_match(struct supertype *st,
+ 	match = NULL;
+ 	for (; array_list; array_list = array_list->next) {
+ 		if (array_list->uuid_set &&
+-		    same_uuid(array_list->uuid, info->uuid, st->ss->swapuuid)
+-		    == 0) {
++		    same_uuid(array_list->uuid, info->uuid,
++			      st->ss->swapuuid) == 0) {
+ 			if (verbose >= 2 && array_list->devname)
+ 				pr_err("UUID differs from %s.\n",
+ 				       array_list->devname);
+diff --git a/managemon.c b/managemon.c
+index 0a33fc9..a8df666 100644
+--- a/managemon.c
++++ b/managemon.c
+@@ -580,8 +580,8 @@ static void manage_member(struct mdstat_ent *mdstat,
+ 			usleep(15*1000);
+ 		}
+ 		replace_array(container, a, newa);
+-		if (sysfs_set_str(&a->info, NULL, "sync_action", "recover")
+-		    == 0)
++		if (sysfs_set_str(&a->info, NULL,
++				  "sync_action", "recover") == 0)
+ 			newa->prev_action = recover;
+ 		dprintf("recovery started on %s\n", a->info.sys_name);
+  out:
+diff --git a/super-ddf.c b/super-ddf.c
+index 4da7c09..c233601 100644
+--- a/super-ddf.c
++++ b/super-ddf.c
+@@ -1883,8 +1883,8 @@ static struct vd_config *find_vdcr(struct ddf_super *ddf, unsigned int inst,
+ 		nsec = n / be16_to_cpu(conf->prim_elmnt_count);
+ 		if (conf->sec_elmnt_seq != nsec) {
+ 			for (ibvd = 1; ibvd < conf->sec_elmnt_count; ibvd++) {
+-				if (v->other_bvds[ibvd-1]->sec_elmnt_seq
+-				    == nsec)
++				if (v->other_bvds[ibvd-1]->sec_elmnt_seq ==
++				    nsec)
+ 					break;
+ 			}
+ 			if (ibvd == conf->sec_elmnt_count)
+@@ -3814,13 +3814,13 @@ static struct mdinfo *container_content_ddf(struct supertype *st, char *subarray
+ 			unsigned int iphys;
+ 			int stt;
+ 
+-			if (be32_to_cpu(ddf->phys->entries[pd].refnum)
+-			    == 0xFFFFFFFF)
++			if (be32_to_cpu(ddf->phys->entries[pd].refnum) ==
++			    0xffffffff)
+ 				continue;
+ 
+ 			stt = be16_to_cpu(ddf->phys->entries[pd].state);
+-			if ((stt & (DDF_Online|DDF_Failed|DDF_Rebuilding))
+-			    != DDF_Online)
++			if ((stt & (DDF_Online|DDF_Failed|DDF_Rebuilding)) !=
++			    DDF_Online)
+ 				continue;
+ 
+ 			i = get_pd_index_from_refnum(
+@@ -4205,8 +4205,8 @@ static int get_bvd_state(const struct ddf_super *ddf,
+ 		if (pd < 0)
+ 			continue;
+ 		st = be16_to_cpu(ddf->phys->entries[pd].state);
+-		if ((st & (DDF_Online|DDF_Failed|DDF_Rebuilding))
+-		    == DDF_Online) {
++		if ((st & (DDF_Online|DDF_Failed|DDF_Rebuilding)) ==
++		    DDF_Online) {
+ 			working++;
+ 			avail[i] = 1;
+ 		}
+diff --git a/super-intel.c b/super-intel.c
+index 3d0a37c..51b7cc3 100644
+--- a/super-intel.c
++++ b/super-intel.c
+@@ -4023,7 +4023,7 @@ static void migrate(struct imsm_dev *dev, struct intel_super *super,
+ 
+ 	/* duplicate and then set the target end state in map[0] */
+ 	memcpy(dest, src, sizeof_imsm_map(src));
+-	if (migr_type == MIGR_REBUILD || migr_type ==  MIGR_GEN_MIGR) {
++	if (migr_type == MIGR_REBUILD || migr_type == MIGR_GEN_MIGR) {
+ 		__u32 ord;
+ 		int i;
+ 
+-- 
+2.7.4
+

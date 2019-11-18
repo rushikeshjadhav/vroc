@@ -1,0 +1,36 @@
+From 12a9d21f4e9fd4d3a14129407f1e8da6d6444cd6 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Tue, 9 May 2017 16:58:55 -0400
+Subject: [RHEL7.5 PATCH 131/169] Monitor/check_array: Get array_disks from
+ sysfs
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Monitor.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Monitor.c b/Monitor.c
+index 9456efd..fe6f2b4 100644
+--- a/Monitor.c
++++ b/Monitor.c
+@@ -481,7 +481,7 @@ static int check_array(struct state *st, struct mdstat_ent *mdstat,
+ 	if (st->devnm[0] == 0)
+ 		strcpy(st->devnm, fd2devnm(fd));
+ 
+-	sra = sysfs_read(-1, st->devnm, GET_LEVEL | GET_DEGRADED |
++	sra = sysfs_read(-1, st->devnm, GET_LEVEL | GET_DISKS | GET_DEGRADED |
+ 			 GET_MISMATCH);
+ 	if (!sra)
+ 		goto disappeared;
+@@ -641,7 +641,7 @@ static int check_array(struct state *st, struct mdstat_ent *mdstat,
+ 	st->spare = array.spare_disks;
+ 	st->failed = sra->array.failed_disks;
+ 	st->utime = array.utime;
+-	st->raid = array.raid_disks;
++	st->raid = sra->array.raid_disks;
+ 	st->err = 0;
+ 	if ((st->active < st->raid) && st->spare == 0)
+ 		retval = 1;
+-- 
+2.7.4
+

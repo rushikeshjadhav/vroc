@@ -1,0 +1,25 @@
+--- a/ReadMe.c	2017-09-19 12:45:03.350330515 +0200
++++ a/ReadMe.c	2017-09-19 12:46:55.317335460 +0200
+@@ -31,9 +31,9 @@
+ #define VERSION "4.0"
+ #endif
+ #ifndef VERS_DATE
+-#define VERS_DATE "2017-01-09"
++#define VERS_DATE "2018-04-03"
+ #endif
+-char Version[] = "mdadm - v" VERSION " - " VERS_DATE "\n";
++char Version[] = "mdadm - v" VERSION " - " VERS_DATE " Intel build: VROC 6.0 release\n";
+ 
+ /*
+  * File: ReadMe.c
+--- a/Makefile	2017-09-19 12:45:03.349330515 +0200
++++ a//Makefile	2017-09-19 12:44:23.639328761 +0200
+@@ -43,7 +43,7 @@
+ 
+ CC ?= $(CROSS_COMPILE)gcc
+ CXFLAGS ?= -ggdb
+-CWFLAGS = -Wall -Werror -Wstrict-prototypes -Wextra -Wno-unused-parameter
++CWFLAGS = -Wall -Werror -Wstrict-prototypes -Wextra -Wno-unused-parameter -DBUILD_LABEL=\"%{BUILD_LABEL}\"
+ ifdef WARN_UNUSED
+ CWFLAGS += -Wp,-D_FORTIFY_SOURCE=2 -O3
+ endif

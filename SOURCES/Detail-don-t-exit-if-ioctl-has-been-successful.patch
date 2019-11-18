@@ -1,0 +1,76 @@
+From 9b8fea914f82281c440cdce9dee6a3775265861c Mon Sep 17 00:00:00 2001
+From: Tomasz Majchrzak <tomasz.majchrzak@intel.com>
+Date: Wed, 24 May 2017 11:34:22 +0200
+Subject: [RHEL7.5 PATCH 147/169] Detail: don't exit if ioctl has been
+ successful
+
+When GET_ARRAY_INFO ioctl is successful, mdadm exits with an error.
+It breaks udev and no links in /dev/md are created.
+
+Also change debug print to error print in the message indicating lack
+of the link to facilitate debugging similar issues in the future.
+
+Signed-off-by: Tomasz Majchrzak <tomasz.majchrzak@intel.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Detail.c | 27 +++++++++++++++------------
+ util.c   |  2 +-
+ 2 files changed, 16 insertions(+), 13 deletions(-)
+
+diff --git a/Detail.c b/Detail.c
+index bf881ff..2332b85 100644
+--- a/Detail.c
++++ b/Detail.c
+@@ -99,21 +99,24 @@ int Detail(char *dev, struct context *c)
+ 	inactive = (sra->array_state == ARRAY_ACTIVE ||
+ 		    sra->array_state == ARRAY_CLEAR);
+ 	st = super_by_fd(fd, &subarray);
+-	if (md_get_array_info(fd, &array) && errno == ENODEV) {
+-		if (sra->array.major_version == -1 &&
+-		    sra->array.minor_version == -1 &&
+-		    sra->devs == NULL) {
+-			pr_err("Array associated with md device %s does not exist.\n", dev);
++	if (md_get_array_info(fd, &array)) {
++		if (errno == ENODEV) {
++			if (sra->array.major_version == -1 &&
++			    sra->array.minor_version == -1 &&
++			    sra->devs == NULL) {
++				pr_err("Array associated with md device %s does not exist.\n",
++				       dev);
++				close(fd);
++				sysfs_free(sra);
++				return rv;
++			}
++			array = sra->array;
++		} else {
++			pr_err("cannot get array detail for %s: %s\n",
++			       dev, strerror(errno));
+ 			close(fd);
+-			sysfs_free(sra);
+ 			return rv;
+ 		}
+-		array = sra->array;
+-	} else {
+-		pr_err("cannot get array detail for %s: %s\n",
+-		       dev, strerror(errno));
+-		close(fd);
+-		return rv;
+ 	}
+ 
+ 	if (fstat(fd, &stb) != 0 && !S_ISBLK(stb.st_mode))
+diff --git a/util.c b/util.c
+index d89438c..8eeb509 100644
+--- a/util.c
++++ b/util.c
+@@ -1169,7 +1169,7 @@ void wait_for(char *dev, int fd)
+ 			delay *= 2;
+ 	}
+ 	if (i == 25)
+-		dprintf("timeout waiting for %s\n", dev);
++		pr_err("timeout waiting for %s\n", dev);
+ }
+ 
+ struct superswitch *superlist[] =
+-- 
+2.7.4
+

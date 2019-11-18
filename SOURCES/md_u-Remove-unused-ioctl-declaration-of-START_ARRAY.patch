@@ -1,0 +1,31 @@
+From ea1c4a8722605da9c2ce5dd1a8324b4f23a34b7a Mon Sep 17 00:00:00 2001
+From: Zhilong Liu <zlliu@suse.com>
+Date: Wed, 31 May 2017 19:38:36 +0800
+Subject: [RHEL7.5 PATCH 149/169] md_u: Remove unused ioctl declaration of
+ START_ARRAY
+
+START_ARRAY is no longer used in the code, so get rid of it.
+MD commit: fbedac04fa11 ("[PATCH] md: the scheduled removal
+of the START_ARRAY ioctl for md") merged in the year 2006.
+
+Signed-off-by: Zhilong Liu <zlliu@suse.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ md_u.h | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/md_u.h b/md_u.h
+index d59aa2d..2d66d52 100644
+--- a/md_u.h
++++ b/md_u.h
+@@ -34,7 +34,6 @@
+ 
+ /* usage */
+ #define RUN_ARRAY		_IOW (MD_MAJOR, 0x30, mdu_param_t)
+-#define START_ARRAY		_IO (MD_MAJOR, 0x31)
+ #define STOP_ARRAY		_IO (MD_MAJOR, 0x32)
+ #define STOP_ARRAY_RO		_IO (MD_MAJOR, 0x33)
+ #define RESTART_ARRAY_RW	_IO (MD_MAJOR, 0x34)
+-- 
+2.7.4
+

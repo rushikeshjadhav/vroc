@@ -1,0 +1,54 @@
+From 039df36231335fabe4da1a22fa3accb160d8bc1b Mon Sep 17 00:00:00 2001
+From: NeilBrown <neilb@suse.com>
+Date: Wed, 12 Apr 2017 16:29:04 +1000
+Subject: [RHEL7.5 PATCH 072/169] mdopen: use parameters/new_array to
+ create arrays whenever possible.
+
+In a sufficiently recent kernel, an md%d array can be
+created by writing to .../parameters/new_array.
+If mdadm does this consistently, then another new
+feature, disabling create_on_open, can be enabled.
+This avoids races on shutdown.
+
+An added benefit of using new_array (where available)
+is that it allows md arrays with numbers larger than 511
+(e.g. md999) to be created.  The old create_on_open
+mechanism doesn't support such devices since
+Commit: af5628f05db6 ("md: disable probing for md devices 512 and over.")
+in Linux 3.17.
+
+After a few more mdadm releases it would be good to
+have mdadm disable create_on_open automatically.
+
+Signed-off-by: NeilBrown <neilb@suse.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ mdopen.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/mdopen.c b/mdopen.c
+index fe240e5..82b97fc 100644
+--- a/mdopen.c
++++ b/mdopen.c
+@@ -313,6 +313,18 @@ int create_mddev(char *dev, char *name, int autof, int trustworthy,
+ 		if (n < 0)
+ 			devnm[0] = 0;
+ 	}
++	if (num >= 0) {
++		int fd;
++		int n = -1;
++		sprintf(devnm, "md%d", num);
++		fd = open("/sys/module/md_mod/parameters/new_array", O_WRONLY);
++		if (fd >= 0) {
++			n = write(fd, devnm, strlen(devnm));
++			close(fd);
++		}
++		if (n < 0)
++			devnm[0] = 0;
++	}
+ 	if (devnm[0])
+ 		;
+ 	else if (num < 0) {
+-- 
+2.7.4
+

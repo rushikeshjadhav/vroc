@@ -1,0 +1,47 @@
+From 75dd32a185871fead13cd3586e00980b35410ff0 Mon Sep 17 00:00:00 2001
+From: Zhilong Liu <zlliu@suse.com>
+Date: Mon, 20 Mar 2017 13:21:41 +0800
+Subject: [RHEL7.5 PATCH 014/169] mdadm/Monitor: Fix NULL pointer
+ dereference when stat2devnm return NULL
+
+Wait(): stat2devnm() returns NULL for non block devices. Check the
+pointer is valid derefencing it. This can happen when using --wait,
+such as the 'f' and 'd' file type, causing a core dump.
+such as: ./mdadm --wait /dev/md/
+
+Reviewed-by: NeilBrown <neilb@suse.com>
+Signed-off-by: Zhilong Liu <zlliu@suse.com>
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ Monitor.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/Monitor.c b/Monitor.c
+index 802a9d9..bdd3e63 100644
+--- a/Monitor.c
++++ b/Monitor.c
+@@ -994,6 +994,7 @@ int Wait(char *dev)
+ {
+ 	struct stat stb;
+ 	char devnm[32];
++	char *tmp;
+ 	int rv = 1;
+ 	int frozen_remaining = 3;
+ 
+@@ -1002,7 +1003,12 @@ int Wait(char *dev)
+ 			strerror(errno));
+ 		return 2;
+ 	}
+-	strcpy(devnm, stat2devnm(&stb));
++	tmp = stat2devnm(&stb);
++	if (!tmp) {
++		pr_err("%s is not a block device.\n", dev);
++		return 2;
++	}
++	strcpy(devnm, tmp);
+ 
+ 	while(1) {
+ 		struct mdstat_ent *ms = mdstat_read(1, 0);
+-- 
+2.7.4
+

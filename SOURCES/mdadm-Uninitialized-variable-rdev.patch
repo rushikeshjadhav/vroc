@@ -1,0 +1,29 @@
+From a3476c9223e55ebb6063e7c5ee057647c70da0d2 Mon Sep 17 00:00:00 2001
+From: James Puthukattukaran <joejames70@gmail.com>
+Date: Tue, 16 May 2017 11:57:00 -0400
+Subject: [RHEL7.5 PATCH 140/169] mdadm: Uninitialized variable rdev
+
+rdev is not initialized properly causing compiler complaint.
+
+Signed-off-by: James Puthukattukaran <joejames70@gmail.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ super-ddf.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/super-ddf.c b/super-ddf.c
+index 9c82f4f..ac14017 100644
+--- a/super-ddf.c
++++ b/super-ddf.c
+@@ -3526,7 +3526,7 @@ static int validate_geometry_ddf_bvd(struct supertype *st,
+ 		return 1;
+ 	}
+ 	/* This device must be a member of the set */
+-	if (!stat_is_blkdev(dev, NULL))
++	if (!stat_is_blkdev(dev, &rdev))
+ 		return 0;
+ 	for (dl = ddf->dlist ; dl ; dl = dl->next) {
+ 		if (dl->major == (int)major(rdev) &&
+-- 
+2.7.4
+

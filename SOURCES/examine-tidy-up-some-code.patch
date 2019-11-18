@@ -1,0 +1,146 @@
+From 36352fc95778677f0319f677ea079c49f7bbe9d0 Mon Sep 17 00:00:00 2001
+From: NeilBrown <neilb@suse.com>
+Date: Fri, 3 Mar 2017 10:57:00 +1100
+Subject: [RHEL7.5 PATCH 006/169] examine: tidy up some code.
+
+Michael Shigorin reports that the 'lcc' compiler isn't able
+to deduce that 'st' must be initialized in
+
+		if (c->SparcAdjust)
+			st->ss->update_super(st, NULL, "sparc2.2",
+
+just because the only times it isn't initialised, 'err' is set non-zero.
+
+This results in a 'possibly uninitialised' warning.
+While there is no bug in the code, this does suggest that maybe
+the code could be made more obviously correct.
+
+So this patch:
+ 1/ moves the "err" variable inside the for loop, so an error in
+    one device doesn't stop the other devices from being processed
+ 2/ calls 'continue' early if the device cannot be opened, so that
+    a level of indent can be removed, and so that it is clear that
+    'st' is always initialised before being used
+ 3/ frees 'st' if an error occured in load_super or load_container.
+
+Reported-by: Michael Shigorin <mike@altlinux.org>
+Signed-off-by: NeilBrown <neilb@suse.com>
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ Examine.c | 75 +++++++++++++++++++++++++++++++++------------------------------
+ 1 file changed, 39 insertions(+), 36 deletions(-)
+
+diff --git a/Examine.c b/Examine.c
+index 953b8ee..7013480 100644
+--- a/Examine.c
++++ b/Examine.c
+@@ -53,7 +53,6 @@ int Examine(struct mddev_dev *devlist,
+ 	 */
+ 	int fd;
+ 	int rv = 0;
+-	int err = 0;
+ 
+ 	struct array {
+ 		struct supertype *st;
+@@ -66,6 +65,8 @@ int Examine(struct mddev_dev *devlist,
+ 	for (; devlist ; devlist = devlist->next) {
+ 		struct supertype *st;
+ 		int have_container = 0;
++		int err = 0;
++		int container = 0;
+ 
+ 		fd = dev_open(devlist->devname, O_RDONLY);
+ 		if (fd < 0) {
+@@ -74,44 +75,46 @@ int Examine(struct mddev_dev *devlist,
+ 				       devlist->devname, strerror(errno));
+ 				rv = 1;
+ 			}
+-			err = 1;
++			continue;
+ 		}
+-		else {
+-			int container = 0;
+-			if (forcest)
+-				st = dup_super(forcest);
+-			else if (must_be_container(fd)) {
+-				/* might be a container */
+-				st = super_by_fd(fd, NULL);
+-				container = 1;
+-			} else
+-				st = guess_super(fd);
+-			if (st) {
+-				err = 1;
+-				st->ignore_hw_compat = 1;
+-				if (!container)
+-					err = st->ss->load_super(st, fd,
+-								 (c->brief||c->scan) ? NULL
+-								 :devlist->devname);
+-				if (err && st->ss->load_container) {
+-					err = st->ss->load_container(st, fd,
+-								 (c->brief||c->scan) ? NULL
+-								 :devlist->devname);
+-					if (!err)
+-						have_container = 1;
+-				}
+-				st->ignore_hw_compat = 0;
+-			} else {
+-				if (!c->brief) {
+-					pr_err("No md superblock detected on %s.\n", devlist->devname);
+-					rv = 1;
+-				}
+-				err = 1;
++
++		if (forcest)
++			st = dup_super(forcest);
++		else if (must_be_container(fd)) {
++			/* might be a container */
++			st = super_by_fd(fd, NULL);
++			container = 1;
++		} else
++			st = guess_super(fd);
++		if (st) {
++			err = 1;
++			st->ignore_hw_compat = 1;
++			if (!container)
++				err = st->ss->load_super(st, fd,
++							 (c->brief||c->scan) ? NULL
++							 :devlist->devname);
++			if (err && st->ss->load_container) {
++				err = st->ss->load_container(st, fd,
++							     (c->brief||c->scan) ? NULL
++							     :devlist->devname);
++				if (!err)
++					have_container = 1;
+ 			}
+-			close(fd);
++			st->ignore_hw_compat = 0;
++		} else {
++			if (!c->brief) {
++				pr_err("No md superblock detected on %s.\n", devlist->devname);
++				rv = 1;
++			}
++			err = 1;
+ 		}
+-		if (err)
++		close(fd);
++
++		if (err) {
++			if (st)
++				st->ss->free_super(st);
+ 			continue;
++		}
+ 
+ 		if (c->SparcAdjust)
+ 			st->ss->update_super(st, NULL, "sparc2.2",
+@@ -121,7 +124,7 @@ int Examine(struct mddev_dev *devlist,
+ 		if (c->brief && st->ss->brief_examine_super == NULL) {
+ 			if (!c->scan)
+ 				pr_err("No brief listing for %s on %s\n",
+-					st->ss->name, devlist->devname);
++				       st->ss->name, devlist->devname);
+ 		} else if (c->brief) {
+ 			struct array *ap;
+ 			char *d;
+-- 
+2.7.4
+

@@ -1,0 +1,91 @@
+From 8e5b52cdda95965787e2a289c855a4ab7099f00d Mon Sep 17 00:00:00 2001
+From: NeilBrown <neilb@suse.com>
+Date: Fri, 4 Aug 2017 15:30:02 +1000
+Subject: [RHEL7.5 PATCH 164/169] Error messages should end with a newline
+ character.
+
+Add "\n" to the end of error messages which don't already
+have one.  Also spell "opened" correctly.
+
+Signed-off-by: NeilBrown <neilb@suse.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Build.c  | 4 ++--
+ Grow.c   | 4 ++--
+ Manage.c | 2 +-
+ mdopen.c | 2 +-
+ 4 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/Build.c b/Build.c
+index 70ba068..962c2e3 100644
+--- a/Build.c
++++ b/Build.c
+@@ -181,7 +181,7 @@ int Build(char *mddev, struct mddev_dev *devlist,
+ 			int major = BITMAP_MAJOR_HI;
+ #if 0
+ 			if (s->bitmap_chunk == UnSet) {
+-				pr_err("%s cannot be openned.", s->bitmap_file);
++				pr_err("%s cannot be opened.\n", s->bitmap_file);
+ 				goto abort;
+ 			}
+ #endif
+@@ -193,7 +193,7 @@ int Build(char *mddev, struct mddev_dev *devlist,
+ 			}
+ 			bitmap_fd = open(s->bitmap_file, O_RDWR);
+ 			if (bitmap_fd < 0) {
+-				pr_err("%s cannot be openned.", s->bitmap_file);
++				pr_err("%s cannot be opened.\n", s->bitmap_file);
+ 				goto abort;
+ 			}
+ 		}
+diff --git a/Grow.c b/Grow.c
+index b1cb306..534ba80 100644
+--- a/Grow.c
++++ b/Grow.c
+@@ -3202,7 +3202,7 @@ static int reshape_array(char *container, int fd, char *devname,
+ 
+ 		if (info2) {
+ 			if (sysfs_init(info2, fd, st->devnm)) {
+-				pr_err("unable to initialize sysfs for %s",
++				pr_err("unable to initialize sysfs for %s\n",
+ 				       st->devnm);
+ 				free(info2);
+ 				goto release;
+@@ -5146,7 +5146,7 @@ int Grow_continue_command(char *devname, int fd,
+ 		}
+ 
+ 		if (sysfs_init(content, fd2, mdstat->devnm)) {
+-			pr_err("Unable to initialize sysfs for %s, Grow cannot continue",
++			pr_err("Unable to initialize sysfs for %s, Grow cannot continue.\n",
+ 			       mdstat->devnm);
+ 			ret_val = 1;
+ 			close(fd2);
+diff --git a/Manage.c b/Manage.c
+index b82a729..871d342 100644
+--- a/Manage.c
++++ b/Manage.c
+@@ -1417,7 +1417,7 @@ int Manage_subdevs(char *devname, int fd,
+ 			}
+ 			add_devlist = conf_get_devs();
+ 			if (add_devlist == NULL) {
+-				pr_err("no devices to scan for missing members.");
++				pr_err("no devices to scan for missing members.\n");
+ 				continue;
+ 			}
+ 			for (dp = &add_devlist; *dp; dp = & (*dp)->next)
+diff --git a/mdopen.c b/mdopen.c
+index c4f1c12..3c0052f 100644
+--- a/mdopen.c
++++ b/mdopen.c
+@@ -198,7 +198,7 @@ int create_mddev(char *dev, char *name, int autof, int trustworthy,
+ 			return -1;
+ 		}
+ 		if (cname[0] == 0) {
+-			pr_err("%s is an invalid name for an md device (empty!).", dev);
++			pr_err("%s is an invalid name for an md device (empty!).\n", dev);
+ 			return -1;
+ 		}
+ 		if (num < 0) {
+-- 
+2.7.4
+

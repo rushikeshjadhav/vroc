@@ -1,0 +1,31 @@
+From dcd24efcfab50c3c298d9b1c941edb6954c2677e Mon Sep 17 00:00:00 2001
+From: NeilBrown <neilb@suse.com>
+Date: Fri, 4 Aug 2017 15:30:02 +1000
+Subject: [RHEL7.5 PATCH 167/169] Don't use exit(ERANGE)
+
+mdadm uses smaller exit codes like 0,1,2,3,4.
+Using ERANGE is inconsistent and not helpful.
+So change it to a more consistent number.
+
+Signed-off-by: NeilBrown <neilb@suse.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ mdadm.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/mdadm.c b/mdadm.c
+index 70b16f2..d80aab3 100644
+--- a/mdadm.c
++++ b/mdadm.c
+@@ -619,7 +619,7 @@ int main(int argc, char *argv[])
+ 			c.homecluster = optarg;
+ 			if (strlen(c.homecluster) > 64) {
+ 				pr_err("Cluster name too big.\n");
+-				exit(ERANGE);
++				exit(2);
+ 			}
+ 			continue;
+ 		case O(CREATE,'x'): /* number of spare (eXtra) disks */
+-- 
+2.7.4
+

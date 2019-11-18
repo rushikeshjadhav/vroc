@@ -1,0 +1,38 @@
+From 1c9591115d577841522acd245cd2445cb77ee204 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Wed, 5 Apr 2017 15:46:35 -0400
+Subject: [RHEL7.5 PATCH 064/169] mdassemble: Use md_get_array_info() to
+ check for valid array
+
+Get rid of another use of md_get_version()
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ mdassemble.c | 9 ++++-----
+ 1 file changed, 4 insertions(+), 5 deletions(-)
+
+diff --git a/mdassemble.c b/mdassemble.c
+index a24b324..f0833bc 100644
+--- a/mdassemble.c
++++ b/mdassemble.c
+@@ -32,13 +32,12 @@ char const Name[] = "mdassemble";
+ /* from mdopen.c */
+ int open_mddev(char *dev, int report_errors/*unused*/)
+ {
++	struct mdu_array_info_s array;
+ 	int mdfd = open(dev, O_RDONLY);
+ 	if (mdfd < 0)
+-		pr_err("error opening %s: %s\n",
+-			dev, strerror(errno));
+-	else if (md_get_version(mdfd) <= 0) {
+-		pr_err("%s does not appear to be an md device\n",
+-			dev);
++		pr_err("error opening %s: %s\n", dev, strerror(errno));
++	else if (md_get_array_info(mdfd, &array) != 0) {
++		pr_err("%s does not appear to be an md device\n", dev);
+ 		close(mdfd);
+ 		mdfd = -1;
+ 	}
+-- 
+2.7.4
+

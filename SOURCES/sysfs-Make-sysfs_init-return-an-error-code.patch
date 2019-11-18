@@ -1,0 +1,332 @@
+From dae131379f9fd82e2867aed25a3ff719f957e9a3 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Thu, 30 Mar 2017 16:52:37 -0400
+Subject: [RHEL7.5 PATCH 048/169] sysfs: Make sysfs_init() return an error
+ code
+
+Rather than have the caller inspect the returned content, return an
+error code from sysfs_init(). In addition make all callers actually
+check it.
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ Assemble.c    | 12 ++++++++++--
+ Create.c      | 10 ++++++++--
+ Grow.c        | 39 +++++++++++++++++++++++++++++++++------
+ Incremental.c | 12 ++++++++++--
+ Manage.c      |  7 +++++--
+ Monitor.c     |  4 +++-
+ mdadm.c       | 11 ++++++++---
+ mdadm.h       |  2 +-
+ sysfs.c       | 16 ++++++++++------
+ 9 files changed, 88 insertions(+), 25 deletions(-)
+
+diff --git a/Assemble.c b/Assemble.c
+index 6a6a56b..672cd12 100644
+--- a/Assemble.c
++++ b/Assemble.c
+@@ -1670,7 +1670,12 @@ try_again:
+ 	}
+ 	st->ss->getinfo_super(st, content, NULL);
+ #ifndef MDASSEMBLE
+-	sysfs_init(content, mdfd, NULL);
++	if (sysfs_init(content, mdfd, NULL)) {
++		pr_err("Unable to initialize sysfs\n");
++		close(mdfd);
++		free(devices);
++		return 1;
++	}
+ #endif
+ 	/* after reload context, store journal_clean in context */
+ 	content->journal_clean = journal_clean;
+@@ -1885,7 +1890,10 @@ int assemble_container_content(struct supertype *st, int mdfd,
+ 	char *avail;
+ 	int err;
+ 
+-	sysfs_init(content, mdfd, NULL);
++	if (sysfs_init(content, mdfd, NULL)) {
++		pr_err("Unable to initialize sysfs\n");
++		return 1;
++	}
+ 
+ 	sra = sysfs_read(mdfd, NULL, GET_VERSION|GET_DEVS);
+ 	if (sra == NULL || strcmp(sra->text_version, content->text_version) != 0) {
+diff --git a/Create.c b/Create.c
+index 0e0778f..32987af 100644
+--- a/Create.c
++++ b/Create.c
+@@ -737,7 +737,10 @@ int Create(struct supertype *st, char *mddev,
+ 
+ 	total_slots = info.array.nr_disks;
+ 	st->ss->getinfo_super(st, &info, NULL);
+-	sysfs_init(&info, mdfd, NULL);
++	if (sysfs_init(&info, mdfd, NULL)) {
++		pr_err("unable to initialize sysfs\n");
++		goto abort_locked;
++	}
+ 
+ 	if (did_default && c->verbose >= 0) {
+ 		if (is_subarray(info.text_version)) {
+@@ -794,7 +797,10 @@ int Create(struct supertype *st, char *mddev,
+ 		s->bitmap_file = NULL;
+ 	}
+ 
+-	sysfs_init(&info, mdfd, NULL);
++	if (sysfs_init(&info, mdfd, NULL)) {
++		pr_err("unable to initialize sysfs\n");
++		goto abort_locked;
++	}
+ 
+ 	if (st->ss->external && st->container_devnm[0]) {
+ 		/* member */
+diff --git a/Grow.c b/Grow.c
+index 0c16d5b..78a3474 100755
+--- a/Grow.c
++++ b/Grow.c
+@@ -455,7 +455,10 @@ int Grow_addbitmap(char *devname, int fd, struct context *c, struct shape *s)
+ 		}
+ 		if (offset_setable) {
+ 			st->ss->getinfo_super(st, mdi, NULL);
+-			sysfs_init(mdi, fd, NULL);
++			if (sysfs_init(mdi, fd, NULL)) {
++				pr_err("failed to intialize sysfs.\n");
++				free(mdi);
++			}
+ 			rv = sysfs_set_num_signed(mdi, NULL, "bitmap/location",
+ 						  mdi->bitmap_offset);
+ 			free(mdi);
+@@ -2149,7 +2152,11 @@ size_change_error:
+ 
+ 	memset(&info, 0, sizeof(info));
+ 	info.array = array;
+-	sysfs_init(&info, fd, NULL);
++	if (sysfs_init(&info, fd, NULL)) {
++		pr_err("failed to intialize sysfs.\n");
++		rv = 1;
++		goto release;
++	}
+ 	strcpy(info.text_version, sra->text_version);
+ 	info.component_size = s->size*2;
+ 	info.new_level = s->level;
+@@ -2870,7 +2877,11 @@ static int impose_level(int fd, int level, char *devname, int verbose)
+ 	char *c;
+ 	struct mdu_array_info_s array;
+ 	struct mdinfo info;
+-	sysfs_init(&info, fd, NULL);
++
++	if (sysfs_init(&info, fd, NULL)) {
++		pr_err("failed to intialize sysfs.\n");
++		return  1;
++	}
+ 
+ 	md_get_array_info(fd, &array);
+ 	if (level == 0 &&
+@@ -3178,7 +3189,12 @@ static int reshape_array(char *container, int fd, char *devname,
+ 		struct mdinfo *d;
+ 
+ 		if (info2) {
+-			sysfs_init(info2, fd, st->devnm);
++			if (sysfs_init(info2, fd, st->devnm)) {
++				pr_err("unable to initialize sysfs for %s",
++				       st->devnm);
++				free(info2);
++				goto release;
++			}
+ 			/* When increasing number of devices, we need to set
+ 			 * new raid_disks before adding these, or they might
+ 			 * be rejected.
+@@ -3777,7 +3793,12 @@ int reshape_container(char *container, char *devname,
+ 		}
+ 		strcpy(last_devnm, mdstat->devnm);
+ 
+-		sysfs_init(content, fd, mdstat->devnm);
++		if (sysfs_init(content, fd, mdstat->devnm)) {
++			pr_err("Unable to initialize sysfs for %s\n",
++			       mdstat->devnm);
++			rv = 1;
++			break;
++		}
+ 
+ 		if (mdmon_running(container))
+ 			flush_mdmon(container);
+@@ -5110,7 +5131,13 @@ int Grow_continue_command(char *devname, int fd,
+ 			goto Grow_continue_command_exit;
+ 		}
+ 
+-		sysfs_init(content, fd2, mdstat->devnm);
++		if (sysfs_init(content, fd2, mdstat->devnm)) {
++			pr_err("Unable to initialize sysfs for %s, Grow cannot continue",
++			       mdstat->devnm);
++			ret_val = 1;
++			close(fd2);
++			goto Grow_continue_command_exit;
++		}
+ 
+ 		close(fd2);
+ 
+diff --git a/Incremental.c b/Incremental.c
+index 802e525..28f1f77 100644
+--- a/Incremental.c
++++ b/Incremental.c
+@@ -326,7 +326,12 @@ int Incremental(struct mddev_dev *devlist, struct context *c,
+ 		if (mdfd < 0)
+ 			goto out_unlock;
+ 
+-		sysfs_init(&info, mdfd, NULL);
++		if (sysfs_init(&info, mdfd, NULL)) {
++			pr_err("unable to initialize sysfs for %s\n",
++			       chosen_name);
++			rv = 2;
++			goto out_unlock;
++		}
+ 
+ 		if (set_array_info(mdfd, st, &info) != 0) {
+ 			pr_err("failed to set array info for %s: %s\n",
+@@ -1734,7 +1739,10 @@ int IncrementalRemove(char *devname, char *id_path, int verbose)
+ 			pr_err("%s does not appear to be a component of any array\n", devname);
+ 		return 1;
+ 	}
+-	sysfs_init(&mdi, -1, ent->devnm);
++	if (sysfs_init(&mdi, -1, ent->devnm)) {
++		pr_err("unable to initialize sysfs for: %s\n", devname);
++		return 1;
++	}
+ 	mdfd = open_dev_excl(ent->devnm);
+ 	if (mdfd > 0) {
+ 		close(mdfd);
+diff --git a/Manage.c b/Manage.c
+index 0ffb6c6..618c98b 100644
+--- a/Manage.c
++++ b/Manage.c
+@@ -1382,12 +1382,15 @@ int Manage_subdevs(char *devname, int fd,
+ 	int busy = 0;
+ 	int raid_slot = -1;
+ 
++	if (sysfs_init(&info, fd, NULL)) {
++		pr_err("sysfs not availabile for %s\n", devname);
++		goto abort;
++	}
++
+ 	if (md_get_array_info(fd, &array)) {
+ 		pr_err("Cannot get array info for %s\n", devname);
+ 		goto abort;
+ 	}
+-	sysfs_init(&info, fd, NULL);
+-
+ 	/* array.size is only 32 bits and may be truncated.
+ 	 * So read from sysfs if possible, and record number of sectors
+ 	 */
+diff --git a/Monitor.c b/Monitor.c
+index 2c0f717..036a561 100644
+--- a/Monitor.c
++++ b/Monitor.c
+@@ -1026,7 +1026,9 @@ int Wait(char *dev)
+ 			 */
+ 			struct mdinfo mdi;
+ 			char buf[21];
+-			sysfs_init(&mdi, -1, devnm);
++
++			if (sysfs_init(&mdi, -1, devnm))
++				return 2;
+ 			if (sysfs_get_str(&mdi, NULL, "sync_action",
+ 					  buf, 20) > 0 &&
+ 			    strcmp(buf,"idle\n") != 0) {
+diff --git a/mdadm.c b/mdadm.c
+index d6b5437..3fe17fc 100644
+--- a/mdadm.c
++++ b/mdadm.c
+@@ -1631,7 +1631,10 @@ int main(int argc, char *argv[])
+ 				rv = 1;
+ 				break;
+ 			}
+-			sysfs_init(&sra, mdfd, NULL);
++			if (sysfs_init(&sra, mdfd, NULL)) {
++				rv = 1;
++				break;
++			}
+ 			if (array_size == MAX_SIZE)
+ 				err = sysfs_set_str(&sra, NULL, "array_size", "default");
+ 			else
+@@ -1998,13 +2001,15 @@ int SetAction(char *dev, char *action)
+ {
+ 	int fd = open(dev, O_RDONLY);
+ 	struct mdinfo mdi;
++	int retval;
++
+ 	if (fd < 0) {
+ 		pr_err("Couldn't open %s: %s\n", dev, strerror(errno));
+ 		return 1;
+ 	}
+-	sysfs_init(&mdi, fd, NULL);
++	retval = sysfs_init(&mdi, fd, NULL);
+ 	close(fd);
+-	if (!mdi.sys_name[0]) {
++	if (retval) {
+ 		pr_err("%s is no an md array\n", dev);
+ 		return 1;
+ 	}
+diff --git a/mdadm.h b/mdadm.h
+index 084bc97..612bd86 100644
+--- a/mdadm.h
++++ b/mdadm.h
+@@ -639,7 +639,7 @@ enum sysfs_read_flags {
+  * else use devnm.
+  */
+ extern int sysfs_open(char *devnm, char *devname, char *attr);
+-extern void sysfs_init(struct mdinfo *mdi, int fd, char *devnm);
++extern int sysfs_init(struct mdinfo *mdi, int fd, char *devnm);
+ extern void sysfs_init_dev(struct mdinfo *mdi, unsigned long devid);
+ extern void sysfs_free(struct mdinfo *sra);
+ extern struct mdinfo *sysfs_read(int fd, char *devnm, unsigned long options);
+diff --git a/sysfs.c b/sysfs.c
+index 93ec3de..51deb23 100644
+--- a/sysfs.c
++++ b/sysfs.c
+@@ -84,25 +84,30 @@ void sysfs_init_dev(struct mdinfo *mdi, unsigned long devid)
+ 		 sizeof(mdi->sys_name), "dev-%s", devid2kname(devid));
+ }
+ 
+-void sysfs_init(struct mdinfo *mdi, int fd, char *devnm)
++int sysfs_init(struct mdinfo *mdi, int fd, char *devnm)
+ {
+ 	struct stat stb;
+ 	char fname[MAX_SYSFS_PATH_LEN];
++	int retval = -ENODEV;
+ 
+ 	mdi->sys_name[0] = 0;
+ 	if (fd >= 0)
+ 		devnm = fd2devnm(fd);
+ 
+ 	if (devnm == NULL)
+-		return;
++		goto out;
+ 
+ 	snprintf(fname, MAX_SYSFS_PATH_LEN, "/sys/block/%s/md", devnm);
+ 
+ 	if (stat(fname, &stb))
+-		return;
++		goto out;
+ 	if (!S_ISDIR(stb.st_mode))
+-		return;
++		goto out;
+ 	strcpy(mdi->sys_name, devnm);
++
++	retval = 0;
++out:
++	return retval;
+ }
+ 
+ struct mdinfo *sysfs_read(int fd, char *devnm, unsigned long options)
+@@ -117,8 +122,7 @@ struct mdinfo *sysfs_read(int fd, char *devnm, unsigned long options)
+ 	struct dirent *de;
+ 
+ 	sra = xcalloc(1, sizeof(*sra));
+-	sysfs_init(sra, fd, devnm);
+-	if (sra->sys_name[0] == 0) {
++	if (sysfs_init(sra, fd, devnm)) {
+ 		free(sra);
+ 		return NULL;
+ 	}
+-- 
+2.7.4
+

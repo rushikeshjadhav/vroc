@@ -1,0 +1,32 @@
+From 4224685fe9baf1df4c42bcb950c9a593efa0585f Mon Sep 17 00:00:00 2001
+From: NeilBrown <neilb@suse.com>
+Date: Mon, 8 May 2017 09:40:09 +1000
+Subject: [RHEL7.5 PATCH 116/169] Mention "endian" in documentation for
+ --update=byte-order
+
+This makes it easier to find as "endian" is a commonly used term.
+
+Reported-by: Trevor Cordes <trevor@tecnopolis.ca>
+Signed-off-by: NeilBrown <neilb@suse.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ mdadm.8.in | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/mdadm.8.in b/mdadm.8.in
+index fb99a5c..388e0ed 100644
+--- a/mdadm.8.in
++++ b/mdadm.8.in
+@@ -1264,7 +1264,8 @@ is correct.
+ The
+ .B byteorder
+ option allows arrays to be moved between machines with different
+-byte-order.
++byte-order, such as from a big-endian machine like a Sparc or some
++MIPS machines, to a little-endian x86_64 machine.
+ When assembling such an array for the first time after a move, giving
+ .B "\-\-update=byteorder"
+ will cause
+-- 
+2.7.4
+

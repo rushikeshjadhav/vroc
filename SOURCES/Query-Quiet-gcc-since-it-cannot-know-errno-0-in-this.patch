@@ -1,0 +1,28 @@
+From 0dfff0f24355ad4b5c1776f7f19a404ffae25415 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Fri, 21 Apr 2017 12:04:05 -0400
+Subject: [RHEL7.5 PATCH 090/169] Query: Quiet gcc since it cannot know
+ errno != 0 in this case
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Query.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/Query.c b/Query.c
+index 4dec9f5..2bd0e2a 100644
+--- a/Query.c
++++ b/Query.c
+@@ -68,6 +68,9 @@ int Query(char *dev)
+ 
+ 		if (md_get_array_info(fd, &array) < 0) {
+ 			ioctlerr = errno;
++			level = -1;
++			raid_disks = -1;
++			spare_disks = -1;
+ 		} else {
+ 			level = array.level;
+ 			raid_disks = array.raid_disks;
+-- 
+2.7.4
+

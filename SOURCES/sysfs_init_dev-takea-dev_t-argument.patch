@@ -1,0 +1,42 @@
+From a37563c91386a0c53d2d46aad00fe89ee28bd0da Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Fri, 29 Sep 2017 18:04:06 -0400
+Subject: [RHEL7.5 PATCH 11/13] sysfs_init_dev - take a dev_t argument
+
+Be consistent and use the correct type.
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ mdadm.h | 2 +-
+ sysfs.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/mdadm.h b/mdadm.h
+index db08188..3fc8a4f 100644
+--- a/mdadm.h
++++ b/mdadm.h
+@@ -654,7 +654,7 @@ enum sysfs_read_flags {
+  */
+ extern int sysfs_open(char *devnm, char *devname, char *attr);
+ extern int sysfs_init(struct mdinfo *mdi, int fd, char *devnm);
+-extern void sysfs_init_dev(struct mdinfo *mdi, unsigned long devid);
++extern void sysfs_init_dev(struct mdinfo *mdi, dev_t devid);
+ extern void sysfs_free(struct mdinfo *sra);
+ extern struct mdinfo *sysfs_read(int fd, char *devnm, unsigned long options);
+ extern int sysfs_attr_match(const char *attr, const char *str);
+diff --git a/sysfs.c b/sysfs.c
+index 78d2b52..68ddd5f 100644
+--- a/sysfs.c
++++ b/sysfs.c
+@@ -78,7 +78,7 @@ int sysfs_open(char *devnm, char *devname, char *attr)
+ 	return fd;
+ }
+ 
+-void sysfs_init_dev(struct mdinfo *mdi, unsigned long devid)
++void sysfs_init_dev(struct mdinfo *mdi, dev_t devid)
+ {
+ 	snprintf(mdi->sys_name,
+ 		 sizeof(mdi->sys_name), "dev-%s", devid2kname(devid));
+-- 
+2.7.4
+

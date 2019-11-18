@@ -1,0 +1,49 @@
+From 5c4b3b9aa9f576305b36d5ccbd4b929b51307ce9 Mon Sep 17 00:00:00 2001
+From: NeilBrown <neilb@suse.com>
+Date: Thu, 20 Apr 2017 12:40:05 +1000
+Subject: [RHEL7.5 PATCH 088/169] systemd/mdadm-last-resort: use
+ ConditionPathExists instead of Conflicts
+
+Commit cec72c071bbe ("systemd/mdadm-last-resort: add Conflicts to .service file.")
+
+added a 'Conflicts' directive to the mdadm-last-resort@.service file in
+the hope that this would make sure the service didn't run after the device
+was active, even if the timer managed to get started, which is possible in
+race conditions.
+
+This seemed to work is testing, but it isn't clear why, and it is known
+to cause problems.
+If systemd happens to know that the mentioned device is a dependency of a
+mount point, the Conflicts can unmount that mountpoint, which is certainly
+not wanted.
+
+So remove the "Conflicts" and instead use
+ ConditionPathExists=!/sys/devices/virtual/block/%i/md/sync_action
+
+The "sync_action" file exists for any array which requires last-resort
+handling, and only appears when the array is activated.  So it is safe
+to rely on it to determine if the last-resort is really needed.
+
+Fixes: cec72c071bbe ("systemd/mdadm-last-resort: add Conflicts to .service file.")
+Signed-off-by: NeilBrown <neilb@suse.com>
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ systemd/mdadm-last-resort@.service | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/systemd/mdadm-last-resort@.service b/systemd/mdadm-last-resort@.service
+index e93d72b..f9d4d12 100644
+--- a/systemd/mdadm-last-resort@.service
++++ b/systemd/mdadm-last-resort@.service
+@@ -1,7 +1,7 @@
+ [Unit]
+ Description=Activate md array even though degraded
+ DefaultDependencies=no
+-Conflicts=sys-devices-virtual-block-%i.device
++ConditionPathExists=!/sys/devices/virtual/block/%i/md/sync_action
+ 
+ [Service]
+ Type=oneshot
+-- 
+2.7.4
+

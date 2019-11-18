@@ -1,0 +1,31 @@
+commit b208f817ec538e56df7280f0353e6bda532b9432
+Author: Tomasz Majchrzak <tomasz.majchrzak@intel.com>
+Date:   Thu Jun 8 16:05:51 2017 +0200
+
+    Grow: don't allow array geometry change with ppl enabled
+    
+    Don't allow array geometry change (size expand, disk adding) when PPL
+    consistency policy is enabled. Current PPL implementation doesn't work when
+    reshape is taking place.
+    
+    Signed-off-by: Tomasz Majchrzak <tomasz.majchrzak@intel.com>
+    Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+
+diff --git a/Grow.c b/Grow.c
+index 4ecb1d8..f7325cb 100644
+--- a/Grow.c
++++ b/Grow.c
+@@ -1880,6 +1880,13 @@ int Grow_reshape(char *devname, int fd,
+ 					free(subarray);
+ 					return 1;
+ 				}
++				if (content->consistency_policy ==
++				    CONSISTENCY_POLICY_PPL) {
++					pr_err("Operation not supported when ppl consistency policy is enabled\n");
++					sysfs_free(cc);
++					free(subarray);
++					return 1;
++				}
+ 			}
+ 			sysfs_free(cc);
+ 		}

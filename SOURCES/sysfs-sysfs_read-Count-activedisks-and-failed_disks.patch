@@ -1,0 +1,47 @@
+From 64ec81da7a70adcdc0dbccaacc69aaf90edb4011 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Fri, 5 May 2017 11:51:43 -0400
+Subject: [RHEL7.5 PATCH 113/169] sysfs/sysfs_read: Count active_disks and
+ failed_disks
+
+Cound active_disks as drives mark 'in_sync' and failed_disks as
+disks marked 'faulty', in the same way ioctl(GET_ARRAY_INFO) does.
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ sysfs.c | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/sysfs.c b/sysfs.c
+index aa30de5..f7967e8 100644
+--- a/sysfs.c
++++ b/sysfs.c
+@@ -270,6 +270,8 @@ struct mdinfo *sysfs_read(int fd, char *devnm, unsigned long options)
+ 	if (!dir)
+ 		goto abort;
+ 	sra->array.spare_disks = 0;
++	sra->array.active_disks = 0;
++	sra->array.failed_disks = 0;
+ 
+ 	devp = &sra->devs;
+ 	sra->devs = NULL;
+@@ -356,10 +358,14 @@ struct mdinfo *sysfs_read(int fd, char *devnm, unsigned long options)
+ 			strcpy(dbase, "state");
+ 			if (load_sys(fname, buf, sizeof(buf)))
+ 				goto abort;
+-			if (strstr(buf, "in_sync"))
++			if (strstr(buf, "in_sync")) {
+ 				dev->disk.state |= (1<<MD_DISK_SYNC);
+-			if (strstr(buf, "faulty"))
++				sra->array.active_disks++;
++			}
++			if (strstr(buf, "faulty")) {
+ 				dev->disk.state |= (1<<MD_DISK_FAULTY);
++				sra->array.failed_disks++;
++			}
+ 			if (dev->disk.state == 0)
+ 				sra->array.spare_disks++;
+ 		}
+-- 
+2.7.4
+

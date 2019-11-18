@@ -1,0 +1,37 @@
+From 6921010d95dbc32c812aa8ffdbfa28e78b54b342 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <jsorensen@fb.com>
+Date: Tue, 2 May 2017 10:36:51 -0400
+Subject: [RHEL7.5 PATCH 101/169] Incremental: Use md_array_active() to
+ determine state of array
+
+One less call to md_get_array_info()
+
+Signed-off-by: Jes Sorensen <jsorensen@fb.com>
+---
+ Incremental.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/Incremental.c b/Incremental.c
+index 4789e36..8909f2f 100644
+--- a/Incremental.c
++++ b/Incremental.c
+@@ -99,7 +99,6 @@ int Incremental(struct mddev_dev *devlist, struct context *c,
+ 	int active_disks;
+ 	int trustworthy;
+ 	char *name_to_use;
+-	mdu_array_info_t ainf;
+ 	struct dev_policy *policy = NULL;
+ 	struct map_ent target_array;
+ 	int have_target;
+@@ -551,7 +550,7 @@ int Incremental(struct mddev_dev *devlist, struct context *c,
+ 	/*   + add any bitmap file  */
+ 	/*   + start the array (auto-readonly). */
+ 
+-	if (md_get_array_info(mdfd, &ainf) == 0) {
++	if (md_array_active(mdfd)) {
+ 		if (c->export) {
+ 			printf("MD_STARTED=already\n");
+ 		} else if (c->verbose >= 0)
+-- 
+2.7.4
+

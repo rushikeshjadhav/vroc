@@ -1,0 +1,10 @@
+--- mdadm-3.4/udev-md-raid-arrays.rules-orig	2016-09-13 16:17:06.275757220 -0400
++++ mdadm-3.4/udev-md-raid-arrays.rules	2016-09-14 16:30:33.597189689 -0400
+@@ -5,6 +5,7 @@
+ # handle md arrays
+ ACTION!="add|change", GOTO="md_end"
+ KERNEL!="md*", GOTO="md_end"
++ATTR{md/metadata_version}!="external:[A-Za-z]*", ATTR{size}=="0", ENV{SYSTEMD_READY}="0", GOTO="md_end"
+ 
+ # partitions have no md/{array_state,metadata_version}, but should not
+ # for that reason be ignored.

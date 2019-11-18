@@ -1,0 +1,31 @@
+From a86b1c8d15dc0aca2eda5276bae088b5f55030a2 Mon Sep 17 00:00:00 2001
+From: Jes Sorensen <Jes.Sorensen@gmail.com>
+Date: Wed, 29 Mar 2017 11:37:27 -0400
+Subject: [RHEL7.5 PATCH 031/169] mdadm.h: struct mdinfo: reorganize ppl
+ elements for better struct packing
+
+Minor optimization putting ints next to ints for better data
+alignment.
+
+Signed-off-by: Jes Sorensen <Jes.Sorensen@gmail.com>
+---
+ mdadm.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/mdadm.h b/mdadm.h
+index 4891acf..dbf1f92 100644
+--- a/mdadm.h
++++ b/mdadm.h
+@@ -301,8 +301,8 @@ struct mdinfo {
+ 	};
+ 	long			bitmap_offset;	/* 0 == none, 1 == a file */
+ 	unsigned int		ppl_size;
+-	unsigned long long	ppl_sector;
+ 	int			ppl_offset;
++	unsigned long long	ppl_sector;
+ 	unsigned long		safe_mode_delay; /* ms delay to mark clean */
+ 	int			new_level, delta_disks, new_layout, new_chunk;
+ 	int			errors;
+-- 
+2.7.4
+
